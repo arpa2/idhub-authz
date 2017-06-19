@@ -1,0 +1,27 @@
+%% diameter.dict -- Application and Attribute Specification
+%%
+%% This file defines the diameter_dict for the ARPA2 Authorization Component.
+%% It is mapped to Erlang code, which is loaded into the diameter app.
+%%
+%% See doc/authz-2-kinds.md for an explanation of the meaning of fields.
+%%
+%% From: Rick van Rein <rick@openfortress.nl>
+
+
+@name arpa2authz
+
+@inherits diameter_gen_base_rfc6733
+
+@messages
+
+Query ::= < Diameter Header: 287, REQ, PXY >
+	< Session-Id >
+	{ User-Name }
+	{ User-Password }
+	[ NAS-Port ]
+	[ NAS-Identifier ]
+
+Response ::= < Diameter Header: 287, PXY >
+	< Session-Id >
+	[ Filter-ID ]
+

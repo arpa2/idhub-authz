@@ -25,11 +25,12 @@
 %%
 
 %% Declarations of the fqn ::= uid+lab@dom types.
--type uid()   :: binary().
--type lab()   :: binary() | absent.
--type dom()   :: binary() | current.
--type fqn()   :: binary().
--type adr()   :: { uid(), lab(), dom() }.
+-type uid()    :: binary().
+-type lab()    :: binary() | absent.
+-type domcur() :: binary().
+-type dom()    :: domcur() | current.
+-type fqn()    :: binary().
+-type adr()    :: { uid(), lab(), dom() }.
 
 %% Selector parts fqnsel ::= uidsel+labsel@domsel
 %% Note that domsel now includes the .domain form

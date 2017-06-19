@@ -38,7 +38,7 @@
 % DATA TYPE DECLARATIONS
 %
 
--include("donai.erh").
+-include("donai.hrl").
 
 
 %
@@ -48,7 +48,7 @@
 %% Parse fqnsel() -> domsel(), or <<uidsel+labsel@domsel>> -> domsel()
 -spec parse_fqnsel2domsel( fqnsel() ) -> domsel().
 parse_fqnsel2domsel( FQNSel ) ->
-	All = size(FQNSel),
+	All = byte_size(FQNSel),
 	% Might use lists:last() for more flexibility
 	[ { At, _One } ] = binary:matches( FQNSel, << $@ >> ),
 	case binary:part( FQNSel, At+1, All-At-1 ) of
@@ -56,12 +56,12 @@ parse_fqnsel2domsel( FQNSel ) ->
 		anything;
 	<< $., More/binary >> ->
 		{ subof, More };
-	DomSel when size(DomSel) > 0 ->
+	DomSel when byte_size(DomSel) > 0 ->
 		DomSel
 	end.
 
 %% Parse fqnsel() -> domsel() but possibly return current
--spec parse_fqnsel2domsel( fqnsel(), dom() ) -> domsel().
+-spec parse_fqnsel2domsel( fqnsel(), domcur() ) -> domsel().
 parse_fqnsel2domsel( FQNSel, CurDom ) ->
 	case parse_fqnsel2domsel( FQNSel ) of
 	CurDom ->
@@ -73,7 +73,7 @@ parse_fqnsel2domsel( FQNSel, CurDom ) ->
 %% Parse fqn() -> dom(), or <<uid+lab@dom>> -> dom()
 -spec parse_fqn2dom( fqn() ) -> dom().
 parse_fqn2dom( FQN ) ->
-	%OLD% All = size(FQN),
+	%OLD% All = byte_size(FQN),
 	%OLD% % Might use lists:last() for more flexibility
 	%OLD% [ { At, _One } ] = binary:matches( FQN, << $@ >> ),
 	%OLD% binary:part( FQN, At+1, All-At-1 ).
@@ -83,7 +83,7 @@ parse_fqn2dom( FQN ) ->
 	end.
 
 %% Parse fqn() -> dom() but possibly return current
--spec parse_fqn2dom( fqn(), dom() ) -> dom().
+-spec parse_fqn2dom( fqn(), domcur() ) -> dom().
 parse_fqn2dom( FQN, CurDom ) ->
 	case parse_fqn2dom( FQN ) of
 	CurDom ->
@@ -100,7 +100,7 @@ parse_fqnsel2adrsel( FQNSel ) ->
 	io:nl (),
 	io:write( Dom ),
 	io:nl (),
-	%TOO_PARSED% At = size(FQNSel) - size(Dom) - 1,
+	%TOO_PARSED% At = byte_size(FQNSel) - byte_size(Dom) - 1,
 	[ { At, _One } ] = binary:matches( FQNSel, << $@ >> ),
 	MatchPart = [ {scope, {0,At}} ],
 	% Might use binary:matches() to constrain plusses
@@ -114,7 +114,7 @@ parse_fqnsel2adrsel( FQNSel ) ->
 		Lab = absent;
 	{ Plus, _ } ->
 		if Plus == 0 ->
-			Uid = anyting;
+			Uid = anything;
 		true ->
 			Uid = binary:part( FQNSel, 0, Plus )
 		end,
@@ -127,7 +127,7 @@ parse_fqnsel2adrsel( FQNSel ) ->
 	{ Uid, Lab, Dom }.
 
 %% Parse fqnsel() -> adrsel() but possibly have dom==current
--spec parse_fqnsel2adrsel ( fqnsel(), dom() ) -> adrsel().
+-spec parse_fqnsel2adrsel ( fqnsel(), domcur() ) -> adrsel().
 parse_fqnsel2adrsel( FQNSel, CurDom ) ->
 	case parse_fqnsel2adrsel( FQNSel ) of
 	{ Uid, Lab, CurDom } ->
@@ -140,7 +140,7 @@ parse_fqnsel2adrsel( FQNSel, CurDom ) ->
 -spec parse_fqn2adr( fqn() ) -> adr().
 parse_fqn2adr( FQN ) ->
 	%OLD% Dom = parse_fqn2dom( FQN ),
-	%OLD% At = size(FQN)-size(Dom)-1,
+	%OLD% At = byte_size(FQN)-byte_size(Dom)-1,
 	%OLD% MatchPart = [ {scope, {0,At}} ],
 	%OLD% % Might use binary:matches() to constrain plusses
 	%OLD% case binary:match( FQN, << $+ >>, MatchPart ) of
@@ -164,7 +164,7 @@ parse_fqn2adr( FQN ) ->
 	end.
 
 % Parse fqn()->adr() but possibly have dom=current
--spec parse_fqn2adr( fqn(), dom() ) -> adr().
+-spec parse_fqn2adr( fqn(), domcur() ) -> adr().
 parse_fqn2adr( FQN, CurDom ) ->
 	case parse_fqn2adr( FQN ) of
 	{ Uid, Lab, CurDom } ->
@@ -186,7 +186,7 @@ compare_adrsel2adr( {UidSel,LabSel,DomSel}, {Uid,Lab,Dom} ) ->
 	compare_domsel2dom (DomSel, Dom).
 
 % Compare an Address Selector to an Address, with Current Domain
--spec compare_adrsel2adr( adrsel(), adr(), dom() ) -> true | false.
+-spec compare_adrsel2adr( adrsel(), adr(), domcur() ) -> true | false.
 compare_adrsel2adr( {UidSel,LabSel,DomSel}, {Uid,Lab,Dom}, CurDom ) ->
 	compare_uidsel2uid (UidSel, Uid) andalso
 	compare_labsel2lab (LabSel, Lab) andalso
@@ -206,7 +206,7 @@ compare_labsel2lab( anything, _ ) -> true;
 compare_labsel2lab( _Lab, _Lab ) -> true;
 compare_labsel2lab( _, _ ) -> false.
 
-% Compare a Domain Selector to a Domain, without a Curren Domain
+% Compare a Domain Selector to a Domain, without a Current Domain
 -spec compare_domsel2dom( domsel(), dom() ) -> true | false.
 compare_domsel2dom( current, _ ) -> false;
 compare_domsel2dom( _, current ) -> false;
@@ -214,12 +214,12 @@ compare_domsel2dom( anything, _ ) -> true;
 compare_domsel2dom( { subof, DomEnd }, Dom ) ->
 			Comparison = [ Dom, << $., DomEnd/binary >> ],
 			SuffixLen = binary:longest_common_suffix ( Comparison ),
-			SuffixLen == size(DomEnd) + 1;
+			SuffixLen == byte_size(DomEnd) + 1;
 compare_domsel2dom( _Dom, _Dom ) -> true;
 compare_domsel2dom( _, _ ) -> false.
 
 % Compare a Domain Selector to a Domain, given a Current Domain
--spec compare_domsel2dom( domsel(), dom(), dom() ) -> true | false.
+-spec compare_domsel2dom( domsel(), dom(), domcur() ) -> true | false.
 compare_domsel2dom( current, current, _ ) -> true;
 compare_domsel2dom( current, _Dom, _Dom ) -> true;
 compare_domsel2dom( current, _, _ ) -> false;
