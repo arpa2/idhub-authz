@@ -96,7 +96,7 @@ donai_match_selector_test_ () -> [
 ].
 
 donai_match_selector_curdom_test_ () ->
-	Cur = "example.org", [
+	Cur = <<"example.com">>, [
 	?_assert (donai:compare_adrsel2adr (
 				donai:parse_fqnsel2adrsel (Sel, Cur),
 				donai:parse_fqn2adr (Adr, Cur),
@@ -107,7 +107,7 @@ donai_match_selector_curdom_test_ () ->
 		{<<"john@example.com">>,<<"@.com">>},
 		{<<"john@example.com">>,<<"john@.com">>},
 		{<<"john@example.com">>,<<"@.">>},
-		{<<"john@examepl.com">>,<<"john@.">>},
+		{<<"john@example.com">>,<<"john@.">>},
 		{<<"john+sales@example.com">>,<<"john+sales@example.com">>},
 		{<<"john+sales@example.com">>,<<"john+@example.com">>},
 		{<<"john+sales@example.com">>,<<"+sales@example.com">>},
@@ -132,7 +132,7 @@ donai_mismatch_selector_test_ () -> [
 ].
 
 donai_mismatch_selector_curdom_test_ () ->
-	Cur = "example.org", [
+	Cur = <<"example.com">>, [
 	?_assertNot (donai:compare_adrsel2adr (
 				donai:parse_fqnsel2adrsel (Sel, Cur),
 				donai:parse_fqn2adr (Adr, Cur),
