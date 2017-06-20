@@ -1,0 +1,54 @@
+; Diameter Dictionary Definitions
+;
+; AVPs and message formats for Diameter in ARPA2 IdentityHub Authorisation.
+;
+; From: Rick van Rein <rick@openfortress.nl>
+
+
+; Run this specification through diameterc to get .erl and .hrl files
+
+
+@name diameter_arpa2_authz
+; -> Erlang module name
+
+@id 3
+; -> generic accounting
+
+
+@avp_types
+; -> just the standard ones
+
+User-Name		1	UTF8String		M
+User-Password		2	OctetString		M
+NAS-Port		5	Unsigned32		M
+Filter-Id		11	UTF8String		M
+NAS-Identifier		32	UTF8String		M
+; Proxy-State		33	OctetString		M
+Session-Id		263	UTF8String		M
+Result-Code		268	Unsigned32		M
+; Proxy-Host		280	DiameterIdentity	M
+Route-Record		282	DiameterIdentity	M
+Destination-Realm	283	DiameterIdentity	M
+; Proxy-Info		284	Grouped			M
+
+@messages
+; -> query, response ;TODO; setup?
+
+Query ::= < Diameter Header: 287, REQ, PXY >
+	1*1 < Session-Id >
+	1*1 { Destination-Realm }
+	1*1 { User-Name }
+	1*1 { User-Password }
+	0*1 [ NAS-Port ]
+	0*1 [ NAS-Identifier ]
+	0*  [ Route-Record ]
+
+Response ::= < Diameter Header: 287, PXY >
+	1*1 < Session-Id >
+	1*1 < Result-Code >
+	0*1 [ User-Name ]
+	0*1 [ Filter-Id ]
+	0*  [ Route-Record ]
+
+@end
+

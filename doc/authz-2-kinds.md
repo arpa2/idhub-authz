@@ -113,12 +113,19 @@ external users to partake in one’s domain activity.
 The [Diameter form](http://idp.arpa2.net/radius.html) of authorisation inquiries
 plays into this potential combination:
 
--   The `User-Password` field always represents `user_A`
+-   The `User-Password` attribute always represents `user_A`; this may or may
+    not include a domain part after a `@` symbol.  If none is supplied, then
+    the `Destination-Realm` is appended after an `@` symbol.
 
--   The `User-Name` field always holds `user_B`, which may simply be the same as
-    `user_A`
+-   The `User-Name` attribute always holds `user_B`, to which authorisation appends
+    an `@` symbol and the `Destination-Realm`.  The result may simply be the same
+    as `user_A`, which would be trivially granted.
 
--   When supplied, the `NAS-Port` represents a `user_C`, and authorisation only
+-   The `Destination-Realm` attribute is always supplied, and indicates the
+    targeted realm.  The addition of this attribute means that authorisation
+    can be setup as a multi-tenant service.
+
+-   When supplied, the `NAS-Port` attributes represents a `user_C`, and authorisation only
     succeeds when `user_B` may communicate with `user_C`
 
 -   When supplied, the resource in `NAS-Identifier` represents a resource, and
