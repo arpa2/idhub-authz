@@ -57,9 +57,9 @@
 -type pd_val() :: [ { adr(),  pd_val() } ].
 
 
-%
-% Database management
-%
+%%
+%% Database management
+%%
 
 
 %% Initialise by clearing the process dictionary

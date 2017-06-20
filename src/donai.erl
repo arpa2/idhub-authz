@@ -46,7 +46,9 @@
 %
 
 %% Parse fqnsel() -> domsel(), or <<uidsel+labsel@domsel>> -> domsel()
+%%
 -spec parse_fqnsel2domsel( fqnsel() ) -> domsel().
+%%
 parse_fqnsel2domsel( FQNSel ) ->
 	All = byte_size(FQNSel),
 	% Might use lists:last() for more flexibility
@@ -61,7 +63,9 @@ parse_fqnsel2domsel( FQNSel ) ->
 	end.
 
 %% Parse fqnsel() -> domsel() but possibly return current
+%%
 -spec parse_fqnsel2domsel( fqnsel(), domcur() ) -> domsel().
+%%
 parse_fqnsel2domsel( FQNSel, CurDom ) ->
 	case parse_fqnsel2domsel( FQNSel ) of
 	CurDom ->
@@ -71,7 +75,9 @@ parse_fqnsel2domsel( FQNSel, CurDom ) ->
 	end.
 
 %% Parse fqn() -> dom(), or <<uid+lab@dom>> -> dom()
+%%
 -spec parse_fqn2dom( fqn() ) -> dom().
+%%
 parse_fqn2dom( FQN ) ->
 	%OLD% All = byte_size(FQN),
 	%OLD% % Might use lists:last() for more flexibility
@@ -83,7 +89,9 @@ parse_fqn2dom( FQN ) ->
 	end.
 
 %% Parse fqn() -> dom() but possibly return current
+%%
 -spec parse_fqn2dom( fqn(), domcur() ) -> dom().
+%%
 parse_fqn2dom( FQN, CurDom ) ->
 	case parse_fqn2dom( FQN ) of
 	CurDom ->
@@ -93,7 +101,9 @@ parse_fqn2dom( FQN, CurDom ) ->
 	end.
 
 %% Parse fqnsel() -> adrsel(), or << uidsel+labsel@domsel >> -> { uidsel(), labsel(), domsel() }
+%%
 -spec parse_fqnsel2adrsel ( fqnsel() ) -> adrsel().
+%%
 parse_fqnsel2adrsel( FQNSel ) ->
 	Dom = parse_fqnsel2domsel( FQNSel ),
 	[ { At, _One } ] = binary:matches( FQNSel, << $@ >> ),
@@ -122,7 +132,9 @@ parse_fqnsel2adrsel( FQNSel ) ->
 	{ Uid, Lab, Dom }.
 
 %% Parse fqnsel() -> adrsel() but possibly have dom==current
+%%
 -spec parse_fqnsel2adrsel ( fqnsel(), domcur() ) -> adrsel().
+%%
 parse_fqnsel2adrsel( FQNSel, CurDom ) ->
 	case parse_fqnsel2adrsel( FQNSel ) of
 	{ Uid, Lab, CurDom } ->
@@ -132,7 +144,9 @@ parse_fqnsel2adrsel( FQNSel, CurDom ) ->
 	end.
 
 %% Parse fqn() -> adr(), or << uid+lab@dom >> -> { uid(), lab(), dom() }
+%%
 -spec parse_fqn2adr( fqn() ) -> adr().
+%%
 parse_fqn2adr( FQN ) ->
 	%OLD% Dom = parse_fqn2dom( FQN ),
 	%OLD% At = byte_size(FQN)-byte_size(Dom)-1,
@@ -159,7 +173,9 @@ parse_fqn2adr( FQN ) ->
 	end.
 
 % Parse fqn()->adr() but possibly have dom=current
+%%
 -spec parse_fqn2adr( fqn(), domcur() ) -> adr().
+%%
 parse_fqn2adr( FQN, CurDom ) ->
 	case parse_fqn2adr( FQN ) of
 	{ Uid, Lab, CurDom } ->
@@ -169,40 +185,50 @@ parse_fqn2adr( FQN, CurDom ) ->
 	end.
 
 
-%
-% ADDRESS COMPARISON OPERATIONS
-%
+%%
+%% ADDRESS COMPARISON OPERATIONS
+%%
 
-% Compare an Address Selector to an Address, without Current Domain
+%% Compare an Address Selector to an Address, without Current Domain
+%%
 -spec compare_adrsel2adr( adrsel(), adr() ) -> true | false.
+%%
 compare_adrsel2adr( {UidSel,LabSel,DomSel}, {Uid,Lab,Dom} ) ->
 	compare_uidsel2uid (UidSel, Uid) andalso
 	compare_labsel2lab (LabSel, Lab) andalso
 	compare_domsel2dom (DomSel, Dom).
 
-% Compare an Address Selector to an Address, with Current Domain
+%% Compare an Address Selector to an Address, with Current Domain
+%%
 -spec compare_adrsel2adr( adrsel(), adr(), domcur() ) -> true | false.
+%%
 compare_adrsel2adr( {UidSel,LabSel,DomSel}, {Uid,Lab,Dom}, CurDom ) ->
 	compare_uidsel2uid (UidSel, Uid) andalso
 	compare_labsel2lab (LabSel, Lab) andalso
 	compare_domsel2dom (DomSel, Dom, CurDom).
 
-% Compare a Uid Selector to a Uid
+%% Compare a Uid Selector to a Uid
+%%
 -spec compare_uidsel2uid( uidsel(), uid() ) -> true | false.
+%%
 compare_uidsel2uid( anything, _ ) -> true;
 compare_uidsel2uid( _Uid, _Uid ) -> true;
 compare_uidsel2uid( _, _ ) -> false.
 
-% Compare a Label Selector to a Label
+%% Compare a Label Selector to a Label
+%%
 -spec compare_labsel2lab( labsel(), lab() ) -> true | false.
+%%
 compare_labsel2lab( absent, absent ) -> true;
 compare_labsel2lab( _, absent ) -> false;
 compare_labsel2lab( anything, _ ) -> true;
 compare_labsel2lab( _Lab, _Lab ) -> true;
 compare_labsel2lab( _, _ ) -> false.
 
-% Compare a Domain Selector to a Domain, without a Current Domain
+%% Compare a Domain Selector to a Domain, without a Current Domain
+%%
 -spec compare_domsel2dom( domsel(), dom() ) -> true | false.
+%%
 compare_domsel2dom( current, _ ) -> false;
 compare_domsel2dom( anything, _ ) -> true;
 compare_domsel2dom( _, current ) -> false;
@@ -213,8 +239,10 @@ compare_domsel2dom( { subof, DomEnd }, Dom ) ->
 compare_domsel2dom( _Dom, _Dom ) -> true;
 compare_domsel2dom( _, _ ) -> false.
 
-% Compare a Domain Selector to a Domain, given a Current Domain
+%% Compare a Domain Selector to a Domain, given a Current Domain
+%%
 -spec compare_domsel2dom( domsel(), dom(), domcur() ) -> true | false.
+%%
 compare_domsel2dom( current, current, _ ) -> true;
 compare_domsel2dom( current, _Dom, _Dom ) -> true;
 compare_domsel2dom( current, _, _ ) -> false;
