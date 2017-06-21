@@ -47,24 +47,30 @@
 
 %% Parse fqnsel() -> domsel(), or <<uidsel+labsel@domsel>> -> domsel()
 %%
--spec parse_fqnsel2domsel( fqnsel() ) -> domsel().
+-spec parse_fqnsel2domsel( fqnsel() ) -> domsel() | syntax_error.
 %%
 parse_fqnsel2domsel( FQNSel ) ->
 	All = byte_size(FQNSel),
+	case binary:matches( FQNSel, << $@ >> ) of
 	% Might use lists:last() for more flexibility
-	[ { At, _One } ] = binary:matches( FQNSel, << $@ >> ),
-	case binary:part( FQNSel, At+1, All-At-1 ) of
-	<< $. >> ->
-		anything;
-	<< $., More/binary >> ->
-		{ subof, More };
-	DomSel when byte_size(DomSel) > 0 ->
-		DomSel
+	[ { At, _One } ] ->
+		case binary:part( FQNSel, At+1, All-At-1 ) of
+		<< $. >> ->
+			anything;
+		<< $., More/binary >> ->
+			{ subof, More };
+		<< >> ->
+			syntax_error;
+		DomSel ->
+			DomSel
+		end;
+	_ ->
+		syntax_error
 	end.
 
 %% Parse fqnsel() -> domsel() but possibly return current
 %%
--spec parse_fqnsel2domsel( fqnsel(), domcur() ) -> domsel().
+-spec parse_fqnsel2domsel( fqnsel(), domcur() ) -> domsel() | syntax_error.
 %%
 parse_fqnsel2domsel( FQNSel, CurDom ) ->
 	case parse_fqnsel2domsel( FQNSel ) of
@@ -76,7 +82,7 @@ parse_fqnsel2domsel( FQNSel, CurDom ) ->
 
 %% Parse fqn() -> dom(), or <<uid+lab@dom>> -> dom()
 %%
--spec parse_fqn2dom( fqn() ) -> dom().
+-spec parse_fqn2dom( fqn() ) -> dom() | syntax_error.
 %%
 parse_fqn2dom( FQN ) ->
 	%OLD% All = byte_size(FQN),
@@ -85,12 +91,14 @@ parse_fqn2dom( FQN ) ->
 	%OLD% binary:part( FQN, At+1, All-At-1 ).
 	case parse_fqnsel2domsel( FQN ) of
 	<< Dom/binary >> ->
-		Dom
+		Dom;
+	_ ->
+		syntax_error
 	end.
 
 %% Parse fqn() -> dom() but possibly return current
 %%
--spec parse_fqn2dom( fqn(), domcur() ) -> dom().
+-spec parse_fqn2dom( fqn(), domcur() ) -> dom() | syntax_error.
 %%
 parse_fqn2dom( FQN, CurDom ) ->
 	case parse_fqn2dom( FQN ) of
@@ -102,38 +110,43 @@ parse_fqn2dom( FQN, CurDom ) ->
 
 %% Parse fqnsel() -> adrsel(), or << uidsel+labsel@domsel >> -> { uidsel(), labsel(), domsel() }
 %%
--spec parse_fqnsel2adrsel ( fqnsel() ) -> adrsel().
+-spec parse_fqnsel2adrsel ( fqnsel() ) -> adrsel() | syntax_error.
 %%
 parse_fqnsel2adrsel( FQNSel ) ->
-	Dom = parse_fqnsel2domsel( FQNSel ),
-	[ { At, _One } ] = binary:matches( FQNSel, << $@ >> ),
-	MatchPart = [ {scope, {0,At}} ],
-	% Might use binary:matches() to constrain plusses
-	case binary:match( FQNSel, << $+ >>, MatchPart ) of
-	nomatch ->
-		if At == 0 ->
-			Uid = anything;
-		true -> 
-			Uid = binary:part( FQNSel, 0, At )
+	case parse_fqnsel2domsel( FQNSel ) of
+	syntax_error ->
+		syntax_error;
+	Dom ->
+		[ { At, _One } ] = binary:matches( FQNSel, << $@ >> ),
+		MatchPart = [ {scope, {0,At}} ],
+		% Might use binary:matches() to constrain plusses
+		case binary:match( FQNSel, << $+ >>, MatchPart ) of
+		nomatch ->
+			if At == 0 ->
+				Uid = anything,
+				Lab = optional;
+			true -> 
+				Uid = binary:part( FQNSel, 0, At ),
+				Lab = absent
+			end;
+		{ Plus, _ } ->
+			if Plus == 0 ->
+				Uid = anything;
+			true ->
+				Uid = binary:part( FQNSel, 0, Plus )
+			end,
+			if At-Plus-1 == 0 ->
+				Lab = anything;
+			true ->
+				Lab = binary:part( FQNSel, Plus + 1, At-Plus-1 )
+			end
 		end,
-		Lab = absent;
-	{ Plus, _ } ->
-		if Plus == 0 ->
-			Uid = anything;
-		true ->
-			Uid = binary:part( FQNSel, 0, Plus )
-		end,
-		if At-Plus-1 == 0 ->
-			Lab = anything;
-		true ->
-			Lab = binary:part( FQNSel, Plus + 1, At-Plus-1 )
-		end
-	end,
-	{ Uid, Lab, Dom }.
+		{ Uid, Lab, Dom }
+	end.
 
 %% Parse fqnsel() -> adrsel() but possibly have dom==current
 %%
--spec parse_fqnsel2adrsel ( fqnsel(), domcur() ) -> adrsel().
+-spec parse_fqnsel2adrsel ( fqnsel(), domcur() ) -> adrsel() | syntax_error.
 %%
 parse_fqnsel2adrsel( FQNSel, CurDom ) ->
 	case parse_fqnsel2adrsel( FQNSel ) of
@@ -145,7 +158,7 @@ parse_fqnsel2adrsel( FQNSel, CurDom ) ->
 
 %% Parse fqn() -> adr(), or << uid+lab@dom >> -> { uid(), lab(), dom() }
 %%
--spec parse_fqn2adr( fqn() ) -> adr().
+-spec parse_fqn2adr( fqn() ) -> adr() | syntax_error.
 %%
 parse_fqn2adr( FQN ) ->
 	%OLD% Dom = parse_fqn2dom( FQN ),
@@ -168,13 +181,17 @@ parse_fqn2adr( FQN ) ->
 			<< _Lab/binary >> ->
 				Adr;
 			absent ->
-				Adr
-		end
+				Adr;
+			_ ->
+				syntax_error
+		end;
+	_ ->
+		syntax_error
 	end.
 
 % Parse fqn()->adr() but possibly have dom=current
 %%
--spec parse_fqn2adr( fqn(), domcur() ) -> adr().
+-spec parse_fqn2adr( fqn(), domcur() ) -> adr() | syntax_error.
 %%
 parse_fqn2adr( FQN, CurDom ) ->
 	case parse_fqn2adr( FQN ) of
@@ -220,6 +237,7 @@ compare_uidsel2uid( _, _ ) -> false.
 -spec compare_labsel2lab( labsel(), lab() ) -> true | false.
 %%
 compare_labsel2lab( absent, absent ) -> true;
+compare_labsel2lab( optional, _ ) -> true;
 compare_labsel2lab( _, absent ) -> false;
 compare_labsel2lab( anything, _ ) -> true;
 compare_labsel2lab( _Lab, _Lab ) -> true;

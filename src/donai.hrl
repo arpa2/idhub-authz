@@ -35,7 +35,7 @@
 %% Selector parts fqnsel ::= uidsel+labsel@domsel
 %% Note that domsel now includes the .domain form
 -type uidsel() :: uid() | anything.
--type labsel() :: lab() | anything.
+-type labsel() :: lab() | anything | optional.
 -type domsel() :: dom() | anything | { subof, dom() }.
 -type fqnsel() :: binary().
 -type adrsel() :: { uidsel(), labsel(), domsel() }.

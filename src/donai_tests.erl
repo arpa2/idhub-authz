@@ -21,7 +21,7 @@ good_donai_syntax_test_ () -> [
 ].
 
 bad_donai_syntax_test_ () -> [
-	?_assertError (_, donai:parse_fqn2adr (In)) || In <- [
+	?_assertEqual (syntax_error, donai:parse_fqn2adr (In)) || In <- [
 		<<"john">>,
 		<<"example.com">>,
 		<<"john@example.com@example.net">>,
@@ -44,7 +44,7 @@ good_donai_selector_syntax_test_ () -> [
                {<<"john+top+sales@example.com">>,
                        {<<"john">>,<<"top+sales">>,<<"example.com">>}},
 		{<<"@example.com">>,
-			{anything,absent,<<"example.com">>}},
+			{anything,optional,<<"example.com">>}},
 		{<<"+@example.com">>,
 			{anything,anything,<<"example.com">>}},
 		{<<"john+@example.com">>,
@@ -63,7 +63,7 @@ good_donai_selector_syntax_test_ () -> [
 ].
 
 bad_donai_selector_syntax_test_ () -> [
-	?_assertError (_, donai:parse_fqn2adr (In)) || In <- [
+	?_assertEqual (syntax_error, donai:parse_fqn2adr (In)) || In <- [
 		<<"">>,
 		<<".">>,
 		<<"john">>,
@@ -90,8 +90,8 @@ donai_match_selector_test_ () -> [
 		{<<"john+sales@example.com">>,<<"+@example.com">>},
 		{<<"john+sales@example.com">>,<<"john+sales@.com">>},
 		{<<"john+sales@example.com">>,<<"john+sales@.">>},
-		{<<"john+sales@example.com">>,<<"+@.">>}
-		%INDEED%CONSISTENT% {<<"john+sales@example.com">>,<<"@.">>}
+		{<<"john+sales@example.com">>,<<"+@.">>},
+		{<<"john+sales@example.com">>,<<"@.">>}
 	]
 ].
 
@@ -114,8 +114,8 @@ donai_match_selector_curdom_test_ () ->
 		{<<"john+sales@example.com">>,<<"+@example.com">>},
 		{<<"john+sales@example.com">>,<<"john+sales@.com">>},
 		{<<"john+sales@example.com">>,<<"john+sales@.">>},
-		{<<"john+sales@example.com">>,<<"+@.">>}
-		%INDEED%CONSISTENT% {<<"john+sales@example.com">>,<<"@.">>}
+		{<<"john+sales@example.com">>,<<"+@.">>},
+		{<<"john+sales@example.com">>,<<"@.">>}
 	]
 ].
 
@@ -126,8 +126,7 @@ donai_mismatch_selector_test_ () -> [
 			) || {Adr,Sel} <- [
 		{<<"john@example.com">>,<<"john@.example.com">>},
 		{<<"john@example.com">>,<<"+@example.com">>},
-		{<<"john@example.com">>,<<"john+@example.com">>},
-		{<<"john+sales@example.com">>,<<"@.">>} %INDEED%CONSISTENT%
+		{<<"john@example.com">>,<<"john+@example.com">>}
 	]
 ].
 
@@ -140,8 +139,7 @@ donai_mismatch_selector_curdom_test_ () ->
 			) || {Adr,Sel} <- [
 		{<<"john@example.com">>,<<"john@.example.com">>},
 		{<<"john@example.com">>,<<"+@example.com">>},
-		{<<"john@example.com">>,<<"john+@example.com">>},
-		{<<"john+sales@example.com">>,<<"@.">>} %INDEED%CONSISTENT%
+		{<<"john@example.com">>,<<"john+@example.com">>}
 	]
 ].
 
