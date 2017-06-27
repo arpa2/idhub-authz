@@ -30,6 +30,7 @@
 -type domcur() :: binary().
 -type dom()    :: domcur() | current.
 -type fqn()    :: binary().
+-type lcl()    :: { uid(), lab() }.
 -type adr()    :: { uid(), lab(), dom() }.
 
 %% Selector parts fqnsel ::= uidsel+labsel@domsel
@@ -38,6 +39,7 @@
 -type labsel() :: lab() | anything | optional.
 -type domsel() :: dom() | anything | { subof, dom() }.
 -type fqnsel() :: binary().
+-type lclsel() :: { uidsel(), labsel() }.
 -type adrsel() :: { uidsel(), labsel(), domsel() }.
 
 
