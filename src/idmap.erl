@@ -518,7 +518,7 @@ flock_post( CurDom,Value ) ->
 %% This table is usually applied
 %%  - once to learn roles and groups for a given user
 %%  - for any of the new groups found, another time to learn its roles
-%%  - TODO:FUTURE: repeat the previous for nay new groups found
+%%  - TODO:FUTURE: repeat the previous for any new groups found
 %%
 -spec flock( db(),dom(),adr(),[ adr() ] ) -> [ adr() ].
 flock( Db,CurDom,Adr,Accu ) ->
@@ -685,12 +685,16 @@ impose( Db,CurDom,AuthnId ) ->
 %%
 -spec access( db(),dom(),adr() ) -> [ adr() ].
 access( Db,CurDom,AuthId ) ->
-		Accu0 = [ AuthId ],
+		%TODO% Following should be a library routine in donai
+		Accu0 = case AuthId of
+		{Uid,Lab,CurDom} -> [ {Uid,Lab,current} ];
+		_ -> [ AuthId ]
+		end,
 		Accu1 = alias( Db,CurDom,AuthId,Accu0 ),
 		FlockElem = fun( Adr,FlockAccu ) ->
 			flock( Db,CurDom,Adr,FlockAccu )
 		end,
 		Accu2 = lists:foldl( FlockElem,Accu1,Accu1 ),
-		Accu3 = lists:foldl( FlockElem,Accu2,Accu2 ),
+		Accu3 = lists:foldl( FlockElem,Accu1,Accu2 ),
 		Accu3.
 
