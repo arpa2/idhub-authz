@@ -9,103 +9,30 @@
 
 -export([
 	init/0,
-	%OLD% idmap/1,
-	%OLD% map_idkind/0,
-	%OLD% pd_insert/2,
-	%OLD% pd_fetch/1,
+	map_idkind/0,
 	impose/3, impose/4,
 	access/3
 	]).
 
 -include("donai.hrl").
+-include("idmap.hrl").
 
-%% The database is a collection of ETS tables that will be updated to
-%% accommodate the idmap and xsmap setup.  There may be updates to the
-%% database in order to commit changes.
--type db() :: #{}.
-
-
-%% The 'idmap' database is a disc-stored cache that unfolds
-%% the inheritance of ARPA2 identities.  The mapping is keyed
-%% by an externally authenticated identity and lists the
-%% corresponding authorised identities.
+%% A translation table for acceptable strings describing kinds of identity
 %%
-%% The storage structure uses shared data wherever possible.
-%% This is done by reflecting the inheritance hierarchy within
-%% a domain -- but crossover is not done, not even for a
-%% foreign user welcomed into the domain.  This requires that
-%% no cyclic dependencies exist (though we might handle that
-%% in the future too).
-%%
-%% The data is stored in the process dictionary, so it ends up
-%% in memory.  This is possible because
-%%   - it is temporary data, with reference data on disc
-%%   - memory is cheap and distribution scales linearly
-%%
-%% When starting up, the entire structure must be built from
-%% scratch.  This would be awful, if it wasn't for the cluster
-%% that allows nodes to go offline individually.  Spread your
-%% cluster geographically and you should not have incredible
-%% downtime, and when power surges do occur the rebuild is not
-%% likely to be the slowest part of the offline period.
-%%
-%% When we add cluster communication to notify availability
-%% of domains on nodes, we may want to retract service before
-%% registering, and only resurrect domain service after having
-%% set them up.  Until a domain is resurrected, it will be
-%% handled by other nodes in the cluster.
-%%
-%% This design is optimised for incremental updates; as arrows
-%% are added and withdrawn from the inheritance diagram we
-%% should modify the data.
-
-
-%OLD% %% Identities can be of various kinds, and some infrastructure
-%OLD% %% is useful to distinguish them.
-%OLD% %%TODO%% We experimentally sort mapped identities on their kind.
-%OLD% %%
-%OLD% -define( user,      0 ).
-%OLD% -define( pseudonym, 1 ).
-%OLD% -define( alias,     2 ).
-%OLD% -define( member,    3 ).
-%OLD% -define( group,     4 ).
-%OLD% -define( occupant,  5 ).
-%OLD% -define( role,      6 ).
-%OLD% %%
-%OLD% -define( minKind,   0 ).
-%OLD% -define( maxKind,   6 ).
-%OLD% %%
-
--type idkind() :: user | pseudonym | alias |
-                      member | group | occupant | role.
-
-%OLD% %% A translation table for acceptable strings describing kinds of identity
-%OLD% %%
-%OLD% map_idkind() -> #{
-%OLD% 	"user"      => ?user,
-%OLD% 	"pseudonym" => ?pseudonym,
-%OLD% 	"alias"     => ?alias,
-%OLD% 	"member"    => ?member,
-%OLD% 	"group"     => ?group,
-%OLD% 	"occupant"  => ?occupant,
-%OLD% 	"role"      => ?role }.
-
-
-%OLD% %% Key and val for the process dictionary
-%OLD% %% This involves sharing data from the inheritance tree
-%OLD% %% TODO: For now, the process dictionary values are much
-%OLD% %%       simpler, capturing just the parsed adr() for the
-%OLD% %%       entry, along with its inherited identities.
-%OLD% %%
-%OLD% -type pd_key() :: fqn().
-%OLD% %%
-%OLD% %TODO%FUTURE% -type pd_val() :: [ { adr(),  pd_val() } ].
-%OLD% -type pd_val() :: { adr(), idkind(), [ fqn() ] }.
+map_idkind() -> #{
+	"user"      => ?user,
+	"pseudonym" => ?pseudonym,
+	"alias"     => ?alias,
+	"member"    => ?member,
+	"group"     => ?group,
+	"occupant"  => ?occupant,
+	"role"      => ?role
+}.
 
 
 
 %%
-%% Database management
+%% MODULE MANAGEMENT
 %%
 
 
@@ -113,201 +40,12 @@
 %%
 -spec init() -> none().
 %%
-init () -> erase ().
-
-%OLD% %% Map an identity and flatten the result into a list
-%OLD% %%
-%OLD% -spec idmap( pd_key() ) -> [ adr() ].
-%OLD% %%
-%OLD% %%LATER%PERHAPS% idmap( authn_id ) -> idmap_flatten( get(id) ).
-%OLD% idmap( authn_id ) -> merge( get( authn_id )).
-
-%OLD% %% Flatten a nested structure identity hierarchy
-%OLD% %% TODO: For now, the process dictionary values are much
-%OLD% %%       simpler, capturing just the parsed adr() for the
-%OLD% %%       entry, along with its inherited identities.
-%OLD% %%
-%OLD% -spec flatten( pd_val() ) -> [ {idkind(),adr()} ].
-%OLD% %%
-%OLD% %LATER%PERHAPS% idmap_flatten( PdVal ) -> idmap_flatten( [], PdVal ).
-%OLD% %%
-%OLD% flatten( {MyAdr,MyKind,Inherits} ) ->
-%OLD% 		[ {MyKind,MyAdr} | lists:map( flatten,
-%OLD% 					lists:map( get,Inherits )) ].
-
-
-%OLD% %% Merge multiple lists of {idkind(), adr()} on dropping kind,
-%OLD% %% Assuming the merged lists are already listed on dropping kind.
-%OLD% %%
-%OLD% -spec merge ( [pd_val()] ) -> [adr()].
-%OLD% %%
-%OLD% merge( IdLists ) -> merge( IdLists,?minKind,[],[] ).
-%OLD% %%
-%OLD% -spec merge ( [{idkind(),adr()}], idkind(), [adr()], [{idkind(),adr()}] ) -> [adr()].
-%OLD% %%
-%OLD% merge( [],_,Accu,[] ) -> Accu;
-%OLD% merge( [],?maxKind,Accu,Future ) -> Future ++ Accu;
-%OLD% merge( [],Kind,Accu,Future ) -> merge( Future,Kind+1,Accu,[] );
-%OLD% merge( [{Kind,Adr}|More],Kind,Accu,Future ) ->
-%OLD% 		merge( More,Kind,[Adr|Accu],Future );
-%OLD% merge( [FutureId|More],Kind,Accu,Future ) ->
-%OLD% 		merge( More,Kind,Accu,[FutureId|Future] ).
-
-%OLD% %% Insert an item in the process dictionary
-%OLD% %%
-%OLD% -spec pd_insert( pd_key(),pd_val() ) -> pd_val().
-%OLD% %%
-%OLD% pd_insert( Key, Val ) ->
-%OLD% 		put( Key, Val ),
-%OLD% 		ok.
-
-%OLD% %% Bluntly dump all the direct and indirect identities, regardless of kind
-%OLD% %%
-%OLD% -spec dump_all( pd_val() ) -> [ {adr(),idkind()} ].
-%OLD% %%
-%OLD% dump_all( {Adr,Kind,Inherit} ) ->
-%OLD% 		dump_all( Adr,Kind,Inherit,[] ).
-%OLD% %%
-%OLD% -spec dump_all( adr(),idkind(),[pd_key()],[adr()] ) -> [ {adr(),idkind()} ].
-%OLD% %%
-%OLD% %FOLDL_COVERED% dump_all( Adr,_Kind,[],Accu ) -> [ Adr | Accu ];
-%OLD% dump_all( Adr,Kind,Inherit,Accu ) ->
-%OLD% 		% case Inherit of
-%OLD% 		% [] -> [ Adr ];
-%OLD% 		% [ Adr | lists:map( dump_all, lists:map( get,Inherit )) ].
-%OLD% 		lists:foldl(
-%OLD% 			fun( SubKey,SubAccu ) ->
-%OLD% 				{ SubAdr,SubKind,SubInherit } = get (SubKey),
-%OLD% 				dump_all( SubAdr,SubKind,SubInherit,SubAccu )
-%OLD% 			end,
-%OLD% 			[ {Adr,Kind} | Accu ],
-%OLD% 			Inherit ).
-%OLD% 		% [ Adr | lists:map( fun(Key) -> pd_fetch( Key ) end,Inherit ) ].
-%OLD% 
-%%
-
-%TODO% -type kindid() :: { idkind(),adr() }.
-%TODO% 
-%TODO% -spec merge( pd_key() ) -> [ adr() ].
-%TODO% merge( Key ) ->
-%TODO% 		SelectId = fun( {_Kind,Id} ) -> Id end,
-%TODO% 		lists:map( SelectId,merge( Key,[],[] )).
-%TODO% 
-%TODO% -spec merge( pd_key(),[kindid()],[kindid()] ) -> [kindid()].
-%TODO% 
-%TODO% merge( Key,Accu,L8er ) ->
-%TODO% 		{ Id,Kind,Sub } = get( Key ),
-%TODO% 		HasSameKind = fun( {SelKind,_Id} ) -> SelKind == Kind end,
-%TODO% 		{ SubNow,SubL8er } = lists:splitwith( HasSameKind,Sub },
-%TODO% 		TODO.
-		
-
-%OLD% %% Lookup an item from the process dictionary
-%OLD% %%
-%OLD% -spec pd_fetch( pd_key() ) -> [ adr() ].
-%OLD% %%
-%OLD% %%TODO%FUTURE% pd_fetch( Key ) -> idmap_flatten( get(Key) ).
-%OLD% pd_fetch( Key ) ->
-%OLD% 		io:format( "Key = ~p~n", [Key] ),
-%OLD% 		Val = get(Key),
-%OLD% 		io:format( "Val = ~p~n", [Val] ),
-%OLD% 		% Flattened = flatten( Val ),
-%OLD% 		% io:write( Flattened ),
-%OLD% 		% merge( Flattened ).
-%OLD% 		Dumped = dump_all( Val ),
-%OLD% 		io:format( "Dumped = ~p~n", [Dumped] ),
-%OLD% 		Merged = merge( Dumped ),
-%OLD% 		io:format( "Merged = ~p~n", [Merged] ),
-%OLD% 		Merged.
-%OLD% 		% io:write( Dumped ),
-%OLD% 		% io:nl(),
-%OLD% 		% io:nl(),
-%OLD% 		% merge( Dumped ).
+init () -> 0.
 
 
 %%
-%% EXPERIMENTAL NEW CODE
+%% DATABASE MANAGEMENT
 %%
-
-%TODO_NAH_NOT_LIKE_THIS% %% Find pseudonyms for a given address under the current domain.
-%TODO_NAH_NOT_LIKE_THIS% %% This will return at least the original address, possibly others.
-%TODO_NAH_NOT_LIKE_THIS% %% Note that only a basic form, without label, would find anything.
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% %% Local identities have keys like {Usr,CurDom}
-%TODO_NAH_NOT_LIKE_THIS% %% Remote identities have keys like {Usr,Lab|absent,Dom,CurDom}
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% -spec pseudonym( dom(),adr() ) -> [ adr() ].
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% pseudonyms( CurDom,[{Usr,Lab,Dom}] ) ->
-%TODO_NAH_NOT_LIKE_THIS% 		if Lab == absent andalso Dom == CurDom ->
-%TODO_NAH_NOT_LIKE_THIS% 			SearchKey = {Usr,CurDom};
-%TODO_NAH_NOT_LIKE_THIS% 		Dom != CurDom ->
-%TODO_NAH_NOT_LIKE_THIS% 			SearchKey = {Usr,Lab,Dom,CurDom};
-%TODO_NAH_NOT_LIKE_THIS% 		true ->
-%TODO_NAH_NOT_LIKE_THIS% 			SearchKey = {}
-%TODO_NAH_NOT_LIKE_THIS% 		end,
-%TODO_NAH_NOT_LIKE_THIS% 		case SearchKey of
-%TODO_NAH_NOT_LIKE_THIS% 		{} ->
-%TODO_NAH_NOT_LIKE_THIS% 			Pseudo = [];
-%TODO_NAH_NOT_LIKE_THIS% 		_ ->
-%TODO_NAH_NOT_LIKE_THIS% 			Found = ets:lookup( PseudoTab,SearchKey ),
-%TODO_NAH_NOT_LIKE_THIS% 			Pseudo = [ {Usr,Lab,current} | {Usr,Lab} <- Found }
-%TODO_NAH_NOT_LIKE_THIS% 		end;
-%TODO_NAH_NOT_LIKE_THIS% 		[ Adr | Pseudo ].
-%TODO_NAH_NOT_LIKE_THIS% 
-%TODO_NAH_NOT_LIKE_THIS% 
-%TODO_NAH_NOT_LIKE_THIS% %% Find all aliases for the given addresses under the current domain.
-%TODO_NAH_NOT_LIKE_THIS% %% This will only work for base names, so without label, and only when
-%TODO_NAH_NOT_LIKE_THIS% %% they reside under the local domain.
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% -spec aliases( dom(),[adr()] ) -> [ adr() ].
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% aliases( CurDom,Adrs ) ->
-%TODO_NAH_NOT_LIKE_THIS% 		aliases( CurDom,Adrs,[] ).
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% -spec aliases( dom(),[adr()],[adr()] ) -> [ adr() ].
-%TODO_NAH_NOT_LIKE_THIS% %%
-%TODO_NAH_NOT_LIKE_THIS% aliases( CurDom,[],Accu ) ->
-%TODO_NAH_NOT_LIKE_THIS% 		Accu;
-%TODO_NAH_NOT_LIKE_THIS% aliases( CurDom,Adrs,Accu ) ->
-%TODO_NAH_NOT_LIKE_THIS% 		TODO = AwfulCode,
-%TODO_NAH_NOT_LIKE_THIS% 		PrefixAliases = fun( Adr,Accu ) ->
-%TODO_NAH_NOT_LIKE_THIS% 			NewAccu = [ RemoteAdr | Accu ],
-%TODO_NAH_NOT_LIKE_THIS% 			case Adr of
-%TODO_NAH_NOT_LIKE_THIS% 			{Usr,Lab,CurDom} ->
-%TODO_NAH_NOT_LIKE_THIS% 				SearchKey = {Usr,Lab},
-%TODO_NAH_NOT_LIKE_THIS% 				Found = ets:lookup( AliasTab,SearchKey ),
-%TODO_NAH_NOT_LIKE_THIS% 				lists:foldl (PrePrefixAliases,NewAccu,Found);
-%TODO_NAH_NOT_LIKE_THIS% 			RemoteAdr ->
-%TODO_NAH_NOT_LIKE_THIS% 				NewAccu
-%TODO_NAH_NOT_LIKE_THIS% 			end,
-%TODO_NAH_NOT_LIKE_THIS% 			case Adr of
-%TODO_NAH_NOT_LIKE_THIS% 			{Usr,absent} ->
-%TODO_NAH_NOT_LIKE_THIS% 				[ {Usr,absent,CurDom} | Accu ];
-%TODO_NAH_NOT_LIKE_THIS% 			{
-%TODO_NAH_NOT_LIKE_THIS% 		lists:foldl( PrefixAliases,Accu,Adrs ).
-
-
-%OLD% unfold_stage( StageName,CurDom,Adrs ) ->
-%OLD% 		case StageName of
-%OLD% 		pseudonyms ->
-%OLD% 			StageFun = fun( Adr,Accu ) ->
-%OLD% 				idmap:pseudonyms( CurDom,Adr,Accu ) end;
-%OLD% 		aliases ->
-%OLD% 			StageFun = fun( Adr,Accu ) ->
-%OLD% 				idmap:aliases( CurDom,Adr,Accu ) end
-%OLD% 		end,
-%OLD% 		NewAccu = [],
-%OLD% 		lists:foldl( StageFun,NewAccu,Adrs ).
-
-
-%OLD% unfold_stages( StageNames,CurDom,Adr ) ->
-%OLD% 		Unfold = fun( StageName,Accu ) ->
-%OLD% 			unfold_stage( StageName,CurDom,Accu )
-%OLD% 		end,
-%OLD% 		InitAccu = [Adr],
-%OLD% 		lists:foldl( Unfold,InitAccu,StageNames ).
-
 
 
 %%
@@ -369,14 +107,10 @@ pseudonym_post( CurDom,Value ) ->
 %%
 -spec pseudonym( db(),dom(),adr(),[adr()] ) -> [adr()].
 pseudonym( Db,CurDom,Adr,Accu ) ->
-		io:format( "Pseudonym Accu   ~p~n", [Accu]),
 		PostProc = fun( Elem,ElemAccu ) ->
-			io:format( "Pseudonum PostProc Elem ~p~n", [Elem]),
-			io:format( "Pseudonum PostProc Post ~p~n", [pseudonym_post( CurDom,Elem )]),
 			[ pseudonym_post( CurDom,Elem ) | ElemAccu ]
 		end,
 		Key = pseudonym_pre( CurDom,Adr ),
-		io:format( "Pseudonym Key    ~p~n", [Key]),
 		case Key of
 		nokey ->
 			Values = [];
@@ -388,7 +122,6 @@ pseudonym( Db,CurDom,Adr,Accu ) ->
 				Values = []
 			end
 		end,
-		io:format( "Pseudonym Values ~p~n", [Values]),
 		lists:foldl( PostProc,Accu,Values ).
 
 %%
@@ -445,8 +178,6 @@ alias_post( CurDom,Uid,Value ) ->
 alias( Db,CurDom,Adr,Accu ) ->
 		{Uid,_,_} = Adr,
 		PostProc = fun( Elem,ElemAccu ) ->
-			io:format( "New alias Elem ~p~n",[Elem] ),
-			io:format( "Deliverd as    ~p~n",[alias_post( CurDom,Uid,Elem )] ),
 			[ alias_post( CurDom,Uid,Elem ) | ElemAccu ]
 		end,
 		Key = alias_pre( CurDom,Adr ),
@@ -461,8 +192,6 @@ alias( Db,CurDom,Adr,Accu ) ->
 				Values = []
 			end
 		end,
-		io:format( "Alias Key    ~p~n", [Key   ]),
-		io:format( "Alias Values ~p~n", [Values]),
 		lists:foldl( PostProc,Accu,Values ).
 
 %%
@@ -480,8 +209,9 @@ alias( Db,CurDom,Adr,Accu ) ->
 %%
 %% Flocks may combine to a role or group Kind, defining a Uid
 %% for that Kind, along with a Lab for the user and a Dom that
-%% defaults to CurDom (also in case of a remote).
-%TODO% Can we ever define an output Dom that is not CurDom?
+%% defaults to CurDom (also in case of a remote).  Note that
+%% the variant with a domain in the output is used to invite
+%% remote users into groups and roles.
 %%
 
 %% Pre-processing for flockTab lookup.  Used in flock/4 below.
@@ -540,66 +270,6 @@ flock( Db,CurDom,Adr,Accu ) ->
 		end,
 		lists:foldl( PostProc,Accu,Values ).
 
-%
-% The following code appears to be *too functional* as far as Erlang thinks.
-% The problem appears to be returning a function as a result, thereby relying
-% on a context that is being closed down.  This has not been gone into deeply.
-%
-% The idea of this code was to specify all the table wrapper functions in a
-% generic manner, and locate variation in the _pre and _post functions alone.
-%
-%TOO_FUNCTIONAL% %TODO% -spec pre_lookup_post( db(),fun(),fun() ) -> (dom(),adr(),[ adr() ] ) -> [ adr() ].
-%TOO_FUNCTIONAL% 
-%TOO_FUNCTIONAL% pre_lookup_post( Db,{TabName,Pre,Post} ) ->
-%TOO_FUNCTIONAL% 	Table = maps:get( TabName,Db ),
-%TOO_FUNCTIONAL% 	PostProc = fun( Elem,ElemAccu ) ->
-%TOO_FUNCTIONAL% 		[ Post( CurDom,Elem ) | ElemAccu ]
-%TOO_FUNCTIONAL% 	end,
-%TOO_FUNCTIONAL% 	fun ( CurDom,Adr,Accu ) ->
-%TOO_FUNCTIONAL% 		Key = Pre( CurDom,Adr ),
-%TOO_FUNCTIONAL% 		case Key of
-%TOO_FUNCTIONAL% 		nokey ->
-%TOO_FUNCTIONAL% 			% This does not actually come out of flock_pre/2
-%TOO_FUNCTIONAL% 			Values = [];
-%TOO_FUNCTIONAL% 		_ ->
-%TOO_FUNCTIONAL% 			Values = ets:lookup( Table, Key )
-%TOO_FUNCTIONAL% 		end,
-%TOO_FUNCTIONAL% 		lists:foldl( PostProc,Accu,Values ).
-%TOO_FUNCTIONAL% 
-%TOO_FUNCTIONAL% pre_lookup_post( Db ) ->
-%TOO_FUNCTIONAL% 	Collective = [
-%TOO_FUNCTIONAL% 		{ pseudonym,{pseudonymTable,pseudonym_pre,pseudonym_post} },
-%TOO_FUNCTIONAL% 		{ alias,    {aliasTable,    alias_pre,    alias_post    } },
-%TOO_FUNCTIONAL% 		{ flock,    {flockTable,    flock_pre,    flock_post    } } ],
-%TOO_FUNCTIONAL% 	Collect = fun( {Atom,Setup},Map ) ->
-%TOO_FUNCTIONAL% 		maps:put( Atom,pre_lookup_post( Db,Setup ),Map )
-%TOO_FUNCTIONAL% 	end,
-%TOO_FUNCTIONAL% 	lists:foldl( Collect,#{},Collective ).
-
-%%TODO%% ResourceTab,CommunicationTab should move to xsmap.erl
-%% 
-%% ResourceTab
-%% -----------------------------+-----------------------------
-%% { ResUUID, CurDom }          | [ { Level, [ AdrSel ] } ]
-%%
-%% Resources are located with a binary ResUUID and a CurDom.
-%%
-%% Resources map to a list of ACLs, each at a given Level and
-%% each consisting of any number of AdrSel entries.  The first
-%% ACL to match determines the Level that is reported.
-%% 
-%% CommunicationTab
-%% -----------------------------+-----------------------------
-%% { Uid, Lab, CurDom }         | [ { Level, [ AdrSel ] } ]
-%%
-%% Communication is located by the Uid, Lab and CurDom of a
-%% user with whom communication is attempted.
-%%
-%% Communication maps to a list of ACLs, each at a given Level
-%% and each consisting of any number of AdrSel entries.  The
-%% first ACL to match determines the Level that is reported.
-%% 
-
 %%
 %% Resolution requests take the form command,value,...
 %% where the command is an atom() that is recognised as a
@@ -611,15 +281,20 @@ flock( Db,CurDom,Adr,Accu ) ->
 %%
 
 
+%%
+%% AUTHORISATION INQUISITION FUNCTIONS
+%%
+
 
 %%
-%% Authorisation commands.
+%% We recognise two types of command:
 %%
 %%  1. impose/4 Asks if an authenticated user can authorise as another user.
 %%     The target domain comes from the intended authorisation user's domain.
-%%     The mappings traversed for this call are pseudonym and alias.
+%%     The mappings traversed for this call are pseudonym and alias.  Note
+%%     that it internally uses impose/3 which lists possible identities.
 %%
-%%  2. access/2 Asks for the identities accessible to an authenticated user.
+%%  2. access/3 Asks for the identities accessible to an authenticated user.
 %%     The target domain is provided independently, and will be determined
 %%     from the targeted resource (or its instance) or the party to whom
 %%     communication is being attempted (this level of detail is located in
@@ -658,20 +333,16 @@ impose( Db,CurDom,AuthnId,AuthzReqId ) ->
 %%
 -spec impose( db(),dom(),adr() ) -> [ adr() ].
 impose( Db,CurDom,AuthnId ) ->
-		io:format ("~n", []),
 		%TODO% Following should be a library routine in donai
 		Accu0 = case AuthnId of
 		{Uid,Lab,CurDom} -> [ {Uid,Lab,current} ];
 		_ -> [ AuthnId ]
 		end,
-		io:format( "Accu0 ~p~n",[Accu0] ),
 		Accu1 = pseudonym( Db,CurDom,AuthnId,Accu0 ),
-		io:format( "Accu1 ~p~n",[Accu1] ),
 		AliasElem = fun( AliasAdr,AliasAccu ) ->
 			alias( Db,CurDom,AliasAdr,AliasAccu )
 		end,
 		Accu2 = lists:foldl( AliasElem,Accu1,Accu1 ),
-		io:format( "Accu2 ~p~n",[Accu2] ),
 		Accu2.
 
 

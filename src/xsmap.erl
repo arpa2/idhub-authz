@@ -248,3 +248,27 @@ authz( PDKey, FQN ) ->
 		end.
 
 
+
+%%TODO%% ResourceTab,CommunicationTab should move to xsmap.erl
+%% 
+%% ResourceTab
+%% -----------------------------+-----------------------------
+%% { ResUUID, CurDom }          | [ { Level, [ AdrSel ] } ]
+%%
+%% Resources are located with a binary ResUUID and a CurDom.
+%%
+%% Resources map to a list of ACLs, each at a given Level and
+%% each consisting of any number of AdrSel entries.  The first
+%% ACL to match determines the Level that is reported.
+%% 
+%% CommunicationTab
+%% -----------------------------+-----------------------------
+%% { Uid, Lab, CurDom }         | [ { Level, [ AdrSel ] } ]
+%%
+%% Communication is located by the Uid, Lab and CurDom of a
+%% user with whom communication is attempted.
+%%
+%% Communication maps to a list of ACLs, each at a given Level
+%% and each consisting of any number of AdrSel entries.  The
+%% first ACL to match determines the Level that is reported.
+%% 
