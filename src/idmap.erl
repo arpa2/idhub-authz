@@ -155,7 +155,7 @@ alias_pre( CurDom,Adr ) ->
 %% that entries do not mention the Uid, because that is part of
 %% the looked up key already.
 %%
--spec alias_post( dom(),uid(),[ lab() | {lab(),dom()} ] ) -> [ adr() ].
+-spec alias_post( dom(),uid(),[ lab() | {lab(),dom()} ] ) -> addresslist().
 alias_post( CurDom,Uid,Value ) ->
 		case Value of
 		{Lab,CurDom} -> {Uid,Lab,current};
@@ -174,7 +174,7 @@ alias_post( CurDom,Uid,Value ) ->
 %% with or without aliases, are repeated in the output; but
 %% there is an accumulator Accu to which answers are prefixed.
 %%
--spec alias( db(),dom(),adr(),[ adr() ] ) -> [ adr() ].
+-spec alias( db(),dom(),adr(),addresslist() ) -> addresslist().
 alias( Db,CurDom,Adr,Accu ) ->
 		{Uid,_,_} = Adr,
 		PostProc = fun( Elem,ElemAccu ) ->
@@ -250,7 +250,7 @@ flock_post( CurDom,Value ) ->
 %%  - for any of the new groups found, another time to learn its roles
 %%  - TODO:FUTURE: repeat the previous for any new groups found
 %%
--spec flock( db(),dom(),adr(),[ adr() ] ) -> [ adr() ].
+-spec flock( db(),dom(),adr(),addresslist() ) -> addresslist().
 flock( Db,CurDom,Adr,Accu ) ->
 		PostProc = fun( Elem,ElemAccu ) ->
 			[ flock_post( CurDom,Elem ) | ElemAccu ]
@@ -324,6 +324,8 @@ flock( Db,CurDom,Adr,Accu ) ->
 %% SMTP command DATA passes a From: header.  Note how this prepares for
 %% communication access checks later on.
 %%
+%% TODO: impair/4 is overtaken in cost.erl too, with additional cost handling
+%%
 -spec impose( db(),dom(),adr(),adr() ) -> true | false.
 impose( _,_CurDom,AuthnId,AuthnId ) ->
 		%TODO% Need to check CurDom in AuthnId?
@@ -334,7 +336,7 @@ impose( Db,CurDom,AuthnId,AuthzReqId ) ->
 %% Return the list of authorisation identities available for a given
 %% authenticated identity AuthnId.
 %%
--spec impose( db(),dom(),adr() ) -> [ adr() ].
+-spec impose( db(),dom(),adr() ) -> addresslist().
 impose( Db,CurDom,AuthnId ) ->
 		%TODO% Following should be a library routine in donai
 		Accu0 = case AuthnId of
@@ -357,7 +359,7 @@ impose( Db,CurDom,AuthnId ) ->
 %%
 %% TODO: We ignore the Kind of the entry, so we even repeat lookup on roles.
 %%
--spec access( db(),dom(),adr() ) -> [ adr() ].
+-spec access( db(),dom(),adr() ) -> addresslist().
 access( Db,CurDom,AuthId ) ->
 		%TODO% Following should be a library routine in donai
 		Accu0 = case AuthId of

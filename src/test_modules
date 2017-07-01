@@ -11,5 +11,5 @@ main (_Args) ->
 	T4 = ok, % T4 = authz_tests:test(),
 	case {T1,T2,T3,T4} of
 	{ok,ok,ok,ok} -> 0;
-	_ -> 1
+	_ -> halt( 1 )
 	end.

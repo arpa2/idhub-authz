@@ -11,8 +11,8 @@
 	%TODO% init/0
 	%TODO% ,service_init/0
 	%TODO% ,authz/2
-	resource/4,
-	communication/4,
+	resource/3, resource/4,
+	communication/3, communication/4,
 	accessible/3
 	]).
 
@@ -126,14 +126,14 @@
 %% information.  It is an error to supply no
 %% addresses at all (no reply can then be formed.)
 %%
--spec accessible( [adr()],accessibility(),level() ) -> { adr(),level() }.
+-spec accessible( addresslist(),accessibility(),level() ) -> { level(),adr() }.
 %%
 accessible( [Adr|_],[],DefaultLevel ) ->
-		{Adr,DefaultLevel};
+		{DefaultLevel,Adr};
 accessible( [_|_]=Adrs,[{_,Level,ACL}|NextLevel],DefaultLevel ) ->
 		accessible( Adrs,Level,ACL,NextLevel,DefaultLevel ).
 %%
--spec accessible( [adr()],level(),acl(),accessibility(),level() ) -> { adr(),level() }.
+-spec accessible( addresslist(),level(),acl(),accessibility(),level() ) -> { level(),adr() }.
 %%
 accessible( Adrs,_CurrentLevel,[],NextLevel,DefaultLevel ) ->
 		% back to the simple function form, for the outer list
@@ -148,7 +148,7 @@ accessible( Adrs,CurrentLevel,[AdrSel|ACL],NextLevel,DefaultLevel ) ->
 			accessible( Adrs,CurrentLevel,ACL,NextLevel,DefaultLevel );
 		[Adr|_] ->
 			io:format( "MATCHED ~p~n",[Adr] ),
-			{Adr,CurrentLevel}
+			{CurrentLevel,Adr}
 		end.
 
 
@@ -303,6 +303,8 @@ resource_post( _CurDom,Value ) ->
 		end.
 
 -spec resource( db(),dom(),uuid(),accessibility() ) -> accessibility().
+resource( Db,CurDom,ResUUID ) ->
+		resource( Db,CurDom,ResUUID,[] ).
 resource( Db,CurDom,ResUUID,Accu ) ->
 		PostProc = fun( Elem,ElemAccu ) ->
 			%TODO% Really?  How to foldl() on one resource?!?
@@ -322,7 +324,6 @@ resource( Db,CurDom,ResUUID,Accu ) ->
 			end
 		end,
 		lists:foldr( PostProc,Accu,Values ).
-
 %% 
 %% CommunicationTab
 %% -----------------------------+-------------------------------
@@ -349,6 +350,8 @@ communication_post( _CurDom,Value ) ->
 		Value.
 
 -spec communication( db(),dom(),adr(),accessibility() ) -> accessibility().
+communication( Db,CurDom,Adr ) ->
+		communication( Db,CurDom,Adr,[] ).
 communication( Db,CurDom,Adr,Accu ) ->
 		PostProc = fun( Elem,ElemAccu ) ->
 			%TODO% Really?  How to foldl() on one communication?!?

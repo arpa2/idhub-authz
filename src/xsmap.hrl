@@ -40,12 +40,13 @@
 
 %% The levels that can be assigned to communication / resources
 %%
+-type level_map() :: impose | imposter.
 -type level_com() :: white | gray | black.
 -type level_res() :: admin | service |
                      delete | create | write | read |
                      prove | know | own |
                      visit.
--type level()     :: level_com() | level_res().
+-type level()     :: level_map() | level_com() | level_res().
 
 %% Resources will be identified through a UUID in binary form with
 %% uuid(), or in a concetation of one or two of these forms into

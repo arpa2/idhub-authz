@@ -57,3 +57,9 @@
 %%
 
 
+%% The output of the identity mapping process is a list of addresses
+%%
+-type addresslist() :: [ adr() ].
+
+
+
