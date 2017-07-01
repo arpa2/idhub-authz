@@ -1,14 +1,16 @@
 % Tests for the idmap module
 
--module(idmap_tests).
+-module( idmap_tests ).
 
--export([testdb/0]).
+-export([
+	testdb/0
+]).
 
 %% Incorporate EUnit test macros
--include_lib("eunit/include/eunit.hrl").
+-include_lib( "eunit/include/eunit.hrl" ).
 
 %% Setup a test database
-testdb () ->
+testdb() ->
 	% pseudonymTab
 	Ps = ets:new( undefined, [
 			set,

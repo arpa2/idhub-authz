@@ -1,6 +1,6 @@
--module(sprocket).
+-module( sprocket ).
 
--behaviour(gen_server).
+-behaviour( gen_server ).
 
 
 -type user() :: binary().
@@ -16,13 +16,13 @@
 
 
 
-init(_Arg) ->
+init( _Arg ) ->
 	% init whatever
 	{ ok, [] }.
 
 
 
-loop(State) ->
+loop( State ) ->
 	receive
 
 	{ add_alias, User, Alias } -> ok;

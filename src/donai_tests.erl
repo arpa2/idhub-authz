@@ -1,9 +1,9 @@
 %% Test module for donai.erl
 
--module(donai_tests).
+-module( donai_tests ).
 
 %% Incorporate EUnit test macros
--include_lib("eunit/include/eunit.hrl").
+-include_lib( "eunit/include/eunit.hrl" ).
 
 good_donai_syntax_test_ () -> [
 	?_assertEqual (donai:parse_fqn2adr (In), Out) || {In,Out} <- [

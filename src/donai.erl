@@ -20,7 +20,7 @@
 %% From: Rick van Rein <rick@openfortress.nl>
 
 
--module(donai).
+-module( donai ).
 
 -export([
 	parse_fqn2dom/1, parse_fqn2dom/2,
@@ -38,7 +38,7 @@
 % DATA TYPE DECLARATIONS
 %
 
--include("donai.hrl").
+-include( "donai.hrl" ).
 
 
 %

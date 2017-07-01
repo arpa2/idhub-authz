@@ -5,7 +5,7 @@
 %% From: Rick van Rein <rick@openfortress.nl>
 
 
--module(idmap).
+-module( idmap ).
 
 -export([
 	init/0,
@@ -14,8 +14,8 @@
 	access/3
 	]).
 
--include("donai.hrl").
--include("idmap.hrl").
+-include( "donai.hrl" ).
+-include( "idmap.hrl" ).
 
 %% A translation table for acceptable strings describing kinds of identity
 %%
@@ -325,6 +325,9 @@ flock( Db,CurDom,Adr,Accu ) ->
 %% communication access checks later on.
 %%
 -spec impose( db(),dom(),adr(),adr() ) -> true | false.
+impose( _,_CurDom,AuthnId,AuthnId ) ->
+		%TODO% Need to check CurDom in AuthnId?
+		true;
 impose( Db,CurDom,AuthnId,AuthzReqId ) ->
 		lists:member( AuthzReqId,impose( Db,CurDom,AuthnId )).
 

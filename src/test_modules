@@ -1,0 +1,15 @@
+#!/usr/bin/env escript
+
+main (_Args) ->
+	io:format( "Testing DoNAI module:"),
+	T1 = donai_tests:test(),
+	io:format( "Testing IDmap module:"),
+	T2 = idmap_tests:test(),
+	io:format( "Testing XSmap module:"),
+	T3 = xsmap_tests:test(),
+	% io:format( "Testing Authz module:"),
+	T4 = ok, % T4 = authz_tests:test(),
+	case {T1,T2,T3,T4} of
+	{ok,ok,ok,ok} -> 0;
+	_ -> 1
+	end.
