@@ -1,4 +1,4 @@
-all: donai.beam idmap.beam xsmap.beam donai_tests.beam idmap_tests.beam xsmap_tests.beam authz.beam
+all: donai.beam idmap.beam xsmap.beam authz.beam donai_tests.beam idmap_tests.beam xsmap_tests.beam authz_tests.beam
 #TO_ADD# diameter_arpa2_authz.beam sprocket.beam
 
 %.beam: %.erl

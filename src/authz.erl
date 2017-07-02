@@ -142,7 +142,7 @@ impose_as( Db,CurDom,AuthnId,AuthzReqId ) ->
 		IdMap = idmap:impose( Db,CurDom,AuthnId ),
 		XsMap = [],
 		Cost = cost( IdMap,XsMap,false ),
-		Result = case lists:member( IdMap,AuthzReqId ) of
+		Result = case lists:member( AuthzReqId,IdMap ) of
 		true  -> {impose,  AuthzReqId};
 		false -> {imposter,AuthnId}
 		end,
@@ -160,7 +160,8 @@ resource_access( Db,CurDom,AuthId,ResUUID ) ->
 		target_pre( Db,CurDom ),
 		IdMap = idmap:access( Db,CurDom,AuthId ),
 		XsMap = xsmap:resource( Db,CurDom,ResUUID ),
-		Result = xsmap:accessible( IdMap,XsMap,visitor ),
+		%TODO% Set "gray" as the default level for no matches at all
+		Result = xsmap:accessible( CurDom,IdMap,XsMap,gray ),
 		Cost = cost( IdMap,XsMap,false ),
 		target_post( Db,CurDom,Cost ),
 		Result.
@@ -170,13 +171,15 @@ resource_access( Db,CurDom,AuthId,ResUUID ) ->
 %
 %TODO% May have to deal with string-form identities instead of adr() form.
 %
+%TODO% May strip away CurDom, unless TargetId can have domain set to current
+%
 -spec communication_access( db(),dom(),adr(),adr() ) -> {level_com(),adr()}.
 %
 communication_access( Db,CurDom,AuthId,TargetId ) ->
 		target_pre( Db,CurDom ),
 		IdMap = idmap:access( Db,CurDom,AuthId ),
 		XsMap = xsmap:communication( Db,CurDom,TargetId ),
-		Result = xsmap:accessible( IdMap,XsMap,black ),
+		Result = xsmap:accessible( CurDom,IdMap,XsMap,black ),
 		Cost = cost( IdMap,XsMap,true ),
 		target_post( Db,CurDom,Cost ),
 		Result.

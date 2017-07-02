@@ -117,7 +117,7 @@ communicate_test_ () ->
 		               { 2, eject_reject, [CatchAll] } | silence ] }
 	] ].
 
-%% Test the accessible/3 function by checking proper answers.
+%% Test the accessible/4 function by checking proper answers.
 %%
 accessible_test_ () ->
 	% Db = testdb(),
@@ -136,7 +136,7 @@ accessible_test_ () ->
 	MarySoprano = {<<"mary">>,<<"soprano">>,Org},
 	JohnAnyRole = {<<"john">>,anything,Com},
 	CatchAll = {anything,optional,anything},
-	[ ?_assertEqual( Out,xsmap:accessible( Adr,Xs,kickout)) || {Adr,Xs,Out} <- [
+	[ ?_assertEqual( Out,xsmap:accessible( Com,Adr,Xs,kickout)) || {Adr,Xs,Out} <- [
 		{[JohnCook], [ {10,black, [DotXXX,SalesAt] },
 			  {20,white, [JohnCook] },
 			  {30,gray,  [JohnAnyRole] },

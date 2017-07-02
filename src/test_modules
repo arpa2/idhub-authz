@@ -7,8 +7,8 @@ main (_Args) ->
 	T2 = idmap_tests:test(),
 	io:format( "Testing XSmap module:"),
 	T3 = xsmap_tests:test(),
-	% io:format( "Testing Authz module:"),
-	T4 = ok, % T4 = authz_tests:test(),
+	io:format( "Testing Authz module:"),
+	T4 = authz_tests:test(),
 	case {T1,T2,T3,T4} of
 	{ok,ok,ok,ok} -> 0;
 	_ -> halt( 1 )

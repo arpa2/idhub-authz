@@ -13,8 +13,8 @@
 	%TODO% ,authz/2
 	resource/3, resource/4,
 	communication/3, communication/4,
-	accessible/3
-	]).
+	accessible/4
+]).
 
 
 -include( "donai.hrl" ).
@@ -118,7 +118,7 @@
 %OLD% 			match_acl( Adr,ACL )
 %OLD% 		end.
 
-%% accessible/3 returns an address match from an ACL
+%% accessible/4 returns an address match from an ACL
 %% as the level of the match and the matching address.
 %% Even when multiple matches are possible, the first
 %% one will be returned.  Multiple adresses are
@@ -126,28 +126,28 @@
 %% information.  It is an error to supply no
 %% addresses at all (no reply can then be formed.)
 %%
--spec accessible( addresslist(),accessibility(),level() ) -> { level(),adr() }.
+-spec accessible( dom(),addresslist(),accessibility(),level() ) -> { level(),adr() }.
 %%
-accessible( [Adr|_],[],DefaultLevel ) ->
+accessible( _,[Adr|_],[],DefaultLevel ) ->
 		{DefaultLevel,Adr};
-accessible( [_|_]=Adrs,[{_,Level,ACL}|NextLevel],DefaultLevel ) ->
-		accessible( Adrs,Level,ACL,NextLevel,DefaultLevel ).
+accessible( CurDom,[_|_]=Adrs,[{_,Level,ACL}|NextLevel],DefaultLevel ) ->
+		accessible( CurDom,Adrs,Level,ACL,NextLevel,DefaultLevel ).
 %%
--spec accessible( addresslist(),level(),acl(),accessibility(),level() ) -> { level(),adr() }.
+-spec accessible( dom(),addresslist(),level(),acl(),accessibility(),level() ) -> { level(),adr() }.
 %%
-accessible( Adrs,_CurrentLevel,[],NextLevel,DefaultLevel ) ->
+accessible( CurDom,Adrs,_CurrentLevel,[],NextLevel,DefaultLevel ) ->
 		% back to the simple function form, for the outer list
-		accessible( Adrs,NextLevel,DefaultLevel );
-accessible( Adrs,CurrentLevel,[AdrSel|ACL],NextLevel,DefaultLevel ) ->
+		accessible( CurDom,Adrs,NextLevel,DefaultLevel );
+accessible( CurDom,Adrs,CurrentLevel,[AdrSel|ACL],NextLevel,DefaultLevel ) ->
 		NotSelected = fun( Adr ) ->
-			not donai:compare_adrsel2adr( AdrSel,Adr )
+			not donai:compare_adrsel2adr( AdrSel,Adr,CurDom )
 		end,
 		case lists:dropwhile( NotSelected,Adrs ) of
 		[]      -> 
 			io:format( "...~n" ),
-			accessible( Adrs,CurrentLevel,ACL,NextLevel,DefaultLevel );
+			accessible( CurDom,Adrs,CurrentLevel,ACL,NextLevel,DefaultLevel );
 		[Adr|_] ->
-			io:format( "MATCHED ~p~n",[Adr] ),
+			io:format( "MATCHED ~p with ~p => ~p~n",[Adr,AdrSel,CurrentLevel] ),
 			{CurrentLevel,Adr}
 		end.
 
@@ -324,6 +324,8 @@ resource( Db,CurDom,ResUUID,Accu ) ->
 			end
 		end,
 		lists:foldr( PostProc,Accu,Values ).
+
+
 %% 
 %% CommunicationTab
 %% -----------------------------+-------------------------------
