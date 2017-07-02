@@ -160,8 +160,8 @@ resource_access( Db,CurDom,AuthId,ResUUID ) ->
 		target_pre( Db,CurDom ),
 		IdMap = idmap:access( Db,CurDom,AuthId ),
 		XsMap = xsmap:resource( Db,CurDom,ResUUID ),
-		%TODO% Set "gray" as the default level for no matches at all
-		Result = xsmap:accessible( CurDom,IdMap,XsMap,gray ),
+		%TODO% Set "black" as the default level for no matches at all
+		Result = xsmap:accessible( CurDom,IdMap,XsMap,black ),
 		Cost = cost( IdMap,XsMap,false ),
 		target_post( Db,CurDom,Cost ),
 		Result.
@@ -179,7 +179,8 @@ communication_access( Db,CurDom,AuthId,TargetId ) ->
 		target_pre( Db,CurDom ),
 		IdMap = idmap:access( Db,CurDom,AuthId ),
 		XsMap = xsmap:communication( Db,CurDom,TargetId ),
-		Result = xsmap:accessible( CurDom,IdMap,XsMap,black ),
+		%TODO% Set "gray" as the default level for no matches at all
+		Result = xsmap:accessible( CurDom,IdMap,XsMap,gray ),
 		Cost = cost( IdMap,XsMap,true ),
 		target_post( Db,CurDom,Cost ),
 		Result.

@@ -129,8 +129,8 @@ resource_access_test_ () ->
 		{ UUID2, blue,  [] },
 		{ UUID3, blue,  [] },
 		{ UUID4, blue,  [] },
-		{ UUID3, gray,  AllIds },
-		{ UUID4, gray,  AllIds }
+		{ UUID3, black,  AllIds },
+		{ UUID4, black,  AllIds }
 	],
 		Id <- Ids
 	].
@@ -169,18 +169,18 @@ communication_access_test_ () ->
 	ReduceLevel = fun( {Level,_} ) -> Level end,
 	RecptDom = fun( {_Uid,_Lab,Dom} ) -> Dom end,
 	[ ?_assertEqual( Level,ReduceLevel( authz:communication_access( Db,RecptDom( Recipient ),Sender,Recipient )) ) || {Recipient,Level,Senders} <- [
-		{SalesXXX,black,AllIds},
+		{SalesXXX,gray,AllIds},
 		{JohnLogin,collegues,[MaryLogin]},
-		{JohnLogin,black,[SalesXXX,JohnLogin,JohnCook,MaryCook,MarySoprano]},
+		{JohnLogin,gray,[SalesXXX,JohnLogin,JohnCook,MaryCook,MarySoprano]},
 		{MaryLogin,blockit,[SalesXXX]},
 		{MaryLogin,welcome,[JohnCook]},
 		{MaryLogin,eject_reject,[JohnLogin,MaryCook,MarySoprano]},
-		{MaryLogin,black,[]},
+		{MaryLogin,gray,[]},
 		{JohnCook,artisan,[MarySoprano,MaryCook]},
 		% Not JohnAnyRole: {JohnCook,fountain,[SalesXXX,MaryLogin]}
-		{JohnCook,black,[JohnLogin,JohnCook]},
-		{MaryCook,black,AllIds},
-		{MarySoprano,black,AllIds}
+		{JohnCook,gray,[JohnLogin,JohnCook]},
+		{MaryCook,gray,AllIds},
+		{MarySoprano,gray,AllIds}
 	],
 		Sender <- Senders
 	].
