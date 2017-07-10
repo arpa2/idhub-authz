@@ -1,4 +1,8 @@
-all: donai.beam idmap.beam xsmap.beam authz.beam donai_tests.beam idmap_tests.beam xsmap_tests.beam authz_tests.beam
+all: donai.beam idmap.beam xsmap.beam authz.beam 
+all: routab.beam frag.beam heir.beam agent.beam
+all: donai_tests.beam idmap_tests.beam xsmap_tests.beam authz_tests.beam
+all: persist_sup.beam frags_sup.beam
+#TO_ADD# portid.beam
 #TO_ADD# diameter_arpa2_authz.beam sprocket.beam
 
 %.beam: %.erl

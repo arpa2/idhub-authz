@@ -17,7 +17,8 @@
 
 -record('Response',
 	{'Session-Id', 'Result-Code', 'User-Name' = [],
-	 'Filter-Id' = [], 'Route-Record' = []}).
+	 'Configuration-Token' = [], 'Filter-Id' = [],
+	 'Route-Record' = []}).
 
 -export([name/0, id/0, vendor_id/0, vendor_name/0,
 	 decode_avps/2, encode_avps/2, msg_name/2, msg_header/1,
@@ -31,7 +32,7 @@
 
 name() -> diameter_arpa2_authz.
 
-id() -> 3.
+id() -> 1.
 
 vendor_id() -> erlang:error(undefined).
 
@@ -41,8 +42,8 @@ msg_name(287, true) -> 'Query';
 msg_name(287, false) -> 'Response';
 msg_name(_, _) -> ''.
 
-msg_header('Query') -> {287, 192, 3};
-msg_header('Response') -> {287, 64, 3};
+msg_header('Query') -> {287, 192, 1};
+msg_header('Response') -> {287, 64, 1};
 msg_header(_) -> erlang:error(badarg).
 
 rec2msg('Query') -> 'Query';
@@ -55,6 +56,8 @@ msg2rec(_) -> erlang:error(badarg).
 
 name2rec(T) -> msg2rec(T).
 
+avp_name(78, undefined) ->
+    {'Configuration-Token', 'OctetString'};
 avp_name(283, undefined) ->
     {'Destination-Realm', 'DiameterIdentity'};
 avp_name(11, undefined) -> {'Filter-Id', 'UTF8String'};
@@ -82,10 +85,13 @@ avp_arity('Query', 'Route-Record') -> {0, '*'};
 avp_arity('Response', 'Session-Id') -> 1;
 avp_arity('Response', 'Result-Code') -> 1;
 avp_arity('Response', 'User-Name') -> {0, 1};
+avp_arity('Response', 'Configuration-Token') -> {0, 1};
 avp_arity('Response', 'Filter-Id') -> {0, 1};
 avp_arity('Response', 'Route-Record') -> {0, '*'};
 avp_arity(_, _) -> 0.
 
+avp_header('Configuration-Token') ->
+    {78, 64, undefined};
 avp_header('Destination-Realm') -> {283, 64, undefined};
 avp_header('Filter-Id') -> {11, 64, undefined};
 avp_header('NAS-Identifier') -> {32, 64, undefined};
@@ -97,6 +103,8 @@ avp_header('User-Name') -> {1, 64, undefined};
 avp_header('User-Password') -> {2, 64, undefined};
 avp_header(_) -> erlang:error(badarg).
 
+avp(T, Data, 'Configuration-Token') ->
+    diameter_types:'OctetString'(T, Data);
 avp(T, Data, 'Destination-Realm') ->
     diameter_types:'DiameterIdentity'(T, Data);
 avp(T, Data, 'Filter-Id') ->
@@ -124,7 +132,8 @@ empty_value(Name) -> empty(Name).
 dict() ->
     [1,
      {avp_types,
-      [{"Destination-Realm", 283, "DiameterIdentity", "M"},
+      [{"Configuration-Token", 78, "OctetString", "M"},
+       {"Destination-Realm", 283, "DiameterIdentity", "M"},
        {"Filter-Id", 11, "UTF8String", "M"},
        {"NAS-Identifier", 32, "UTF8String", "M"},
        {"NAS-Port", 5, "Unsigned32", "M"},
@@ -136,7 +145,7 @@ dict() ->
      {avp_vendor_id, []}, {codecs, []},
      {command_codes, [{287, "Query", "Response"}]},
      {custom_types, []}, {define, []}, {enum, []},
-     {grouped, []}, {id, 3}, {import_avps, []},
+     {grouped, []}, {id, 1}, {import_avps, []},
      {import_enums, []}, {import_groups, []}, {inherits, []},
      {messages,
       [{"Query", 287, ['REQ', 'PXY'], [],
@@ -145,7 +154,8 @@ dict() ->
 	 {'*', ["Route-Record"]}]},
        {"Response", 287, ['PXY'], [],
 	[{{"Session-Id"}}, {{"Result-Code"}}, ["User-Name"],
-	 ["Filter-Id"], {'*', ["Route-Record"]}]}]},
+	 ["Configuration-Token"], ["Filter-Id"],
+	 {'*', ["Route-Record"]}]}]},
      {name, "diameter_arpa2_authz"}].
 
 

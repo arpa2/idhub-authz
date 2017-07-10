@@ -11,8 +11,8 @@
 @name diameter_arpa2_authz
 ; -> Erlang module name
 
-@id 3
-; -> generic accounting
+@id 1
+; -> authorisation and accounting
 
 
 @avp_types
@@ -24,6 +24,7 @@ NAS-Port		5	Unsigned32		M
 Filter-Id		11	UTF8String		M
 NAS-Identifier		32	UTF8String		M
 ; Proxy-State		33	OctetString		M
+Configuration-Token	78	OctetString		M
 Session-Id		263	UTF8String		M
 Result-Code		268	Unsigned32		M
 ; Proxy-Host		280	DiameterIdentity	M
@@ -47,6 +48,7 @@ Response ::= < Diameter Header: 287, PXY >
 	1*1 < Session-Id >
 	1*1 < Result-Code >
 	0*1 [ User-Name ]
+	0*1 [ Configuration-Token ]
 	0*1 [ Filter-Id ]
 	0*  [ Route-Record ]
 

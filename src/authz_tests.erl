@@ -4,8 +4,22 @@
 
 -module( authz_tests ).
 
+-export([
+	testdb/0
+]).
+
 %% Incorporate EUnit test macros
 -include_lib( "eunit/include/eunit.hrl" ).
+
+
+testdb() ->
+	maps:merge(
+		xsmap_tests:testdb(),
+		maps:merge(
+			testdb_flock(),
+			testdb_alias()
+		)
+	).
 
 
 %% Generate a flockTab as a ready-to-merge database map
@@ -92,13 +106,7 @@ impose_as_test_ () ->
 %% compare the resulting level -- which may be really low but not failure.
 %%
 resource_access_test_ () ->
-	Db = maps:merge(
-		xsmap_tests:testdb(),
-		maps:merge(
-			testdb_flock(),
-			testdb_alias()
-		)
-	),
+	Db = testdb(),
 	Com = <<"example.com">>,
 	Org = <<"example.org">>,
 	_DotXXX = {anything,optional,{subof,<<"xxx">>}},
@@ -142,13 +150,7 @@ resource_access_test_ () ->
 %% compare the resulting level -- which may be really low but not failure.
 %%
 communication_access_test_ () ->
-	Db = maps:merge(
-		xsmap_tests:testdb(),
-		maps:merge(
-			testdb_flock(),
-			testdb_alias()
-		)
-	),
+	Db = testdb(),
 	Com = <<"example.com">>,
 	Org = <<"example.org">>,
 	_DotXXX = {anything,optional,{subof,<<"xxx">>}},

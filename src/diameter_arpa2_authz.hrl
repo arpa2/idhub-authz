@@ -16,4 +16,5 @@
 
 -record('Response',
 	{'Session-Id', 'Result-Code', 'User-Name' = [],
-	 'Filter-Id' = [], 'Route-Record' = []}).
+	 'Configuration-Token' = [], 'Filter-Id' = [],
+	 'Route-Record' = []}).

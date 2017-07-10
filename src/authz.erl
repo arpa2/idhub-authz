@@ -28,7 +28,7 @@
 	impose_as/4,
 	resource_access/4,
 	communication_access/4,
-	spawn_worker/5,
+	spawn_worker/6,
 	unspawn_worker/1,
 	run_worker/6
 ]).
@@ -202,9 +202,18 @@ communication_access( Db,CurDom,AuthId,TargetId ) ->
 % is assumed to have been collected during spawn_monitor/3 and is
 % sent to the worker process for use when it wants to send a reply.
 %
--spec run_worker( pid(),authz_funtag(),db(),dom(),adr(),authz_target() ) -> none().
+-spec run_worker( pid(),authz_funtag(),pid(),dom(),adr(),authz_target() ) -> none().
 %
-run_worker( ClientPid,AuthzFun,Db,CurDom,AuthnId,Target ) ->
+run_worker( ClientPid,AuthzFun,DbPid,CurDom,AuthnId,Target ) ->
+		DbRef = erlang:monitor( process,DbPid ),
+		DbPid ! {dbget,CurDom},
+		receive
+		{dbgot,Db} ->
+			ok;
+		{'DOWN',DbRef,process,DbPid,Reason} ->
+			Db = erlang:error( Reason )
+		end,
+		erlang:demonitor( DbRef ),
 		{Level,AuthzId} = case AuthzFun of
 		impose_as ->
 			impose_as(            Db,CurDom,AuthnId,Target);
@@ -224,16 +233,21 @@ run_worker( ClientPid,AuthzFun,Db,CurDom,AuthnId,Target ) ->
 % a Ref for a monitor that guards the authorisation process.  The caller
 % should store it in a key-value store to retrieve upon completion.
 %
+%TODO% Oversight, we always get a Pid, also with 'DOWN', so ignore Ref
+%	_except_ that erlang:demonitor needs the Ref
+%TODO% Client is an agent, running on behalf of just one query, so OK
+%	to return Pid as well as Ref; no need for DB-mapping
+%
 % When done, the authorisation worker sends the caller one of these:
 %
-%  1. {'DOWN',Ref,process,Reason}
+%  1. {'DOWN',Ref,process,Pid,Reason}
 %
 %       The Ref may be removed from the key-value store;
 %	Reason may be noproc or killed on error.
 %
 %  2. {authz,Ref,level(),adr()}
 %
-%	The Red may be removed from the key-value store;
+%	The Ref may be removed from the key-value store;
 %	A 'DOWN' message may still follow (probably with Reason 'normal');
 %	The level() and adr() are the Result from one of the routines
 %	impose_as/4, resource_access/4, communication_access/4.
@@ -243,24 +257,27 @@ run_worker( ClientPid,AuthzFun,Db,CurDom,AuthnId,Target ) ->
 % that this function delivers.  This guarantees that a possible extra
 % {'DOWN',...} message is avoided or suppressed, whichever it takes.
 %
--spec spawn_worker( authz_funtag(),db(),dom(),adr(),authz_target() ) -> reference().
+%TODO% Use spawn_opt(Node,?MODULE,run_worker,Args,[monitor]) to reach remotes
 %
-spawn_worker( AuthzFun,Db,CurDom,AuthnId,Target ) ->
-		{Pid,Ref} = erlang:spawn_monitor(
+-spec spawn_worker( node(),authz_funtag(),pid(),dom(),adr(),authz_target() ) -> reference().
+%
+spawn_worker( Node,AuthzFun,DbPid,CurDom,AuthnId,Target ) ->
+		{Pid,Ref} = erlang:spawn_opt(
+			Node,
 			?MODULE, run_worker,
-			{ self(),AuthzFun,Db,CurDom,AuthnId,Target } ),
+			{ self(),AuthzFun,DbPid,CurDom,AuthnId,Target },
+			[monitor] ),
 		Pid ! {ref2pid,Ref},	% Pleasantly lossy
 		Ref.
 
 
 % unspawn_worker/1 reverses the work of spawn_worker, by blocking the
 % reception of further monitor messages from the spawned process.
-% The worker may continue to run, however, which would not normally be
-% a problem, but it may be something to take care of while developing.
+% The worker independently continues to run to its natural termination.
 %
 -spec unspawn_worker( reference() ) -> none().
 %
 unspawn_worker( Ref ) ->
-		erlang:demonitor( Ref ).
+		erlang:demonitor( Ref,[flush] ).
 
 

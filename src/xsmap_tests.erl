@@ -56,7 +56,17 @@ testdb() ->
 			[ { 0, blockit, [SalesAt] },
 			  { 1, welcome, [JohnAnyRole] },
 			  { 2, eject_reject, [CatchAll] } ] } ),
-	#{ resourceTab => Rsc, communicationTab => Coms }.
+	% pseudonymTab
+	Ps = ets:new( undefined, [
+			set,
+			public,
+			{read_concurrency,true}
+			] ),
+	ets:insert( Ps, { { <<"jonathan">>, <<"example.com">> },
+			[ <<"john">>, <<"johann">> ] } ),
+	ets:insert( Ps, { { <<"meridith">>, <<"example.org">> },
+			[ <<"mary">> ] } ),
+	#{ resourceTab => Rsc, communicationTab => Coms, pseudonymTab => Ps }.
 
 %% Test the resouce/4 function by comparing accessibility() listings.
 %%
