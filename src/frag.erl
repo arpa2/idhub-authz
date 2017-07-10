@@ -193,16 +193,6 @@ loop( State=#{hashval:=HashValue,routab:=Pid_routab,dbmap:=DbMap,timeout:=Timeou
 		end.
 
 
-%OLD% % Compute the hash, using any of the acknowledged algorithms
-%OLD% %
-%OLD% -spec compute_hash( hashalg(),dom() ) -> hashval().
-%OLD% %
-%OLD% compute_hash( {crc32mod,N},Dom ) ->
-%OLD% 		erlang:crc32( Dom ) rem N;
-%OLD% compute_hash( HashAlgo,_ ) ->
-%OLD% 		erlang:error( {unsupported,HashAlgo} ).
-
-
 %OLD% % Find a database fragment for a given hash outcome.
 %OLD% %  - HashAlgorithms are tuples, like  {crc32mod,5}
 %OLD% %  - HashValues     are tuples, like {{crc32mod,5},2}

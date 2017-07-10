@@ -1,5 +1,6 @@
 all: donai.beam idmap.beam xsmap.beam authz.beam 
-all: routab.beam frag.beam heir.beam agent.beam
+all: routab.beam frag.beam heir.beam hash.beam
+all: agent.beam
 all: donai_tests.beam idmap_tests.beam xsmap_tests.beam authz_tests.beam
 all: persist_sup.beam frags_sup.beam
 #TO_ADD# portid.beam

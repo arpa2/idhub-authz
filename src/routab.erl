@@ -53,6 +53,8 @@
 
 -module( routab ).
 
+-include( "hash.hrl" ).
+
 -export([
 	init/1,
 	loop/1
@@ -82,13 +84,6 @@
 %%
 %% ROUTAB DATABASE MANAGEMENT
 %%
-
--type hashalgo()    :: {crc32mod,integer()}
-		     | {crc32mask,integer()}
-		     | literal
-		     | atom.
--type hashoutcome() :: integer() | binary().
--type hashvalue()   :: {hashalgo(),hashoutcome()}.
 
 -type localfragpidopt() :: pid() | none.
 -type localheirpidopt() :: pid() | none.
