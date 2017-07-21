@@ -21,6 +21,12 @@
 
 -module( heir ).
 
+%IDEA%
+%IDEA% Just an idea: the heir could start off with tables before frag/routab
+%IDEA% After all, routab knows when coverage == 100% with local/remote frag
+%IDEA% After all, frag   knows when its full table has been recovered or loaded
+%IDEA%
+
 -export([
 	init/1,
 	loop/1
@@ -64,7 +70,7 @@ loop( {HashValue,DbMap,Pid_routab} ) ->
 		% The routab process goes down; register once more
 		%
 		{'DOWN',_Ref,process,Pid_routab,_Reason} ->
-			register_routab( HashValue,1 ),
+			NewPid_routab = register_routab( HashValue,1 ),
 			NewDbMap = DbMap;
 		%
 		% We are sent a table, presumably because our parent dies
@@ -72,7 +78,8 @@ loop( {HashValue,DbMap,Pid_routab} ) ->
 		{'ETS-TRANSFER',Table,_FromPid,DbMapKey} ->
 			% We will crash on repeated submissions of a table
 			% to avoid curious synchronisation and ordering errors
-			NewDbMap = DbMap#{DbMapKey=>Table};
+			NewDbMap = DbMap#{DbMapKey=>Table},
+			NewPid_routab = Pid_routab;
 		%
 		% Some process, presumably our parent, requests table hand_over
 		%
@@ -84,7 +91,8 @@ loop( {HashValue,DbMap,Pid_routab} ) ->
 			Pid_self = self(),
 			{Pid_frag,_,Pid_self} = ets:lookup( routing_table,HashValue ),
 			{Table,NewDbMap} = maps:take( DbMapKey,DbMap ),
-			ets:give_away( Table,Pid_frag,DbMapKey )
+			ets:give_away( Table,Pid_frag,DbMapKey ),
+			NewPid_routab = Pid_routab
 		end,
-		loop( {HashValue,NewDbMap,Pid_routab} ).
+		loop( {HashValue,NewDbMap,NewPid_routab} ).
 

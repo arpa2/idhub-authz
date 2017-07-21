@@ -44,7 +44,7 @@
 % is awaited; the routab will also return that favour.
 %
 % The simplest possible routab, which is used when no
-% configuration is available, is a (mod 1) over a crc32
+% configuration is provided, is a (mod 1) over a crc32
 % domain.  This covers all domains because the outcome is
 % always 0.
 %
@@ -201,7 +201,7 @@
 loop( State ) ->
 		receive
 		{'DOWN',Ref_down,process,Pid_down,Reason} ->
-			%TODO% Not implemented yet
+			%TODO% Nothing done yet -- they all get back to us?
 			ok;
 		{commfailure,HashValue,Pid} ->
 			commfailure( HashValue,Pid );
@@ -322,14 +322,15 @@ add_local_fragment( HashValue,Pid_frag ) ->
 		case ets:lookup( routing_table,HashValue ) of
 		[] ->
 			ets:insert( routing_table,{HashValue,Pid_frag,[],none} );
-		[{HashValue,_OldFrag,RemoteFrag,FragHeirOpt}] ->
-			% ignore _OldFrag even if it may be defined
+		[{HashValue,OldFrag,RemoteFrag,FragHeirOpt}] ->
+			% retract OldFrag, since OldFrag appears to have died
+			notify_peers( {delentries_peer,[{HashValue,OldFrag}]} ),
 			ets:insert( routing_table,{HashValue,Pid_frag,RemoteFrag,FragHeirOpt} ),
-			if is_pid( FragHeirOpt ) ->
-				Pid_frag ! update_heir;
-			FragHeirOpt == none ->
-				ok
-			end
+			%NOTUSED% if is_pid( FragHeirOpt ) ->
+			%NOTUSED% 	Pid_frag ! update_heir;
+			%NOTUSED% FragHeirOpt == none ->
+			%NOTUSED% 	ok
+			%NOTUSED% end
 		end,
 		notify_peers( {addentries_peer,[{HashValue,Pid_frag}]} ).
 
@@ -369,12 +370,13 @@ add_local_fragment_heir( HashValue,Pid_heir ) ->
 		[{HashValue,Frag,RemoteFrag,_OldHeir}] ->
 			% insert heir, possibly after frag
 			ets:insert( routing_table,{HashValue,Frag,RemoteFrag,Pid_heir} ),
-			if is_pid( Frag ) ->
-				Frag ! update_heir,
-				ok;
-			Frag == none ->
-				ok
-			end
+			%NOTUSED% if is_pid( Frag ) ->
+			%NOTUSED% 	Frag ! update_heir,
+			%NOTUSED% 	ok;
+			%NOTUSED% Frag == none ->
+			%NOTUSED% 	ok
+			%NOTUSED% end
+			ok
 		end.
 
 % A heir is renouncing its service for a given HashValue.
@@ -392,12 +394,13 @@ del_local_fragment_heir( HashValue,Pid_heir ) ->
 		[{HashValue,Frag,RemoteFrag,Pid_heir}] ->
 			% delete heir that does exist
 			ets:insert( routing_table,{HashValue,Frag,RemoteFrag,none} ),
-			if is_pid( Frag ) ->
-				Frag ! update_heir,
-				ok;
-			Frag == none ->
-				ok
-			end
+			%NOTUSED% if is_pid( Frag ) ->
+			%NOTUSED% 	Frag ! update_heir,
+			%NOTUSED% 	ok;
+			%NOTUSED% Frag == none ->
+			%NOTUSED% 	ok
+			%NOTUSED% end
+			ok
 		end.
 
 
@@ -471,18 +474,48 @@ delentries_peer( [{HashValue,Remote_pid}|More] ) ->
 -spec allentries_peer( pid(), [{hashvalue(),pid()}] ) -> ok. 
 %
 allentries_peer( Pid_peer,Entries ) ->
-		allentries_peer_remove( Pid_peer ),
-		addentries_peer( Entries ).
+		% Have a dict that maps HashValue to the peer's Pid_frag
+		EntryDict = dict:from_list( Entries ),
+		% Have the node of the peer
+		Node_peer = node( Pid_peer ),
+		allentries_peer_replace( Node_peer,EntryDict ).
 
 
 % Remove all entries in the routing_table made by the peer
-% routab.  This involves matching the nodes for stored pids.
+% Pid_peer.  This involves matching the nodes for stored pids.
 %
 %TODO% Is this desirable?  It is costly, how about commfailure?
 %
 allentries_peer_remove( Pid_peer ) ->
-		%TODO% Not implemented yet.
+		EmptyDict = dict:new(),
+		allentries_peer_replace( node( Pid_peer ),EmptyDict ),
 		ok.
+
+
+% Replace all entries in the routing_table on the peer node
+% with the new mappings provided in EmptyDict.
+%
+-spec allentries_peer_replace         ( node(),term()             ) -> ok.
+-spec allentries_peer_replace_internal( node(),term(),hashvalue() ) -> ok. 
+%
+allentries_peer_replace( Node_peer,EntryDict ) ->
+		Key = ets:first( routing_table ),
+		allentries_peer_replace_internal( Node_peer,EntryDict,Key ).
+%
+allentries_peer_replace_internal( Node_peer,EntryDict,'$end_of_table' ) ->
+		addentries_peer (dict:to_list( EntryDict ));
+allentries_peer_replace_internal( Node_peer,EntryDict,Key ) ->
+		[{Key,{Frag,Remote,Heir}}] = ets:lookup( routing_table,Key ),
+		FltRemote = [ Rmt || Rmt<-Remote, node(Rmt)/=Node_peer ],
+		case dict:take( Key,EntryDict ) of
+		error ->
+			NewEntryDict = EntryDict,
+			NewRemote = FltRemote;
+		{Value,NewEntryDict} ->
+			NewRemote = [Value|FltRemote]
+		end,
+		NextKey = ets:next( routing_table,Key ),
+		allentries_peer_replace_internal( Node_peer,NewEntryDict,NextKey ).
 
 
 % An agent reports a problem communicating with a Pid.
@@ -518,9 +551,13 @@ commsuccess( HashValue,Pid_succeeded ) ->
 %%
 
 
-init( State ) ->
-		init_have_routing_table(),
+init( {RoutingTableName,RoutabHeirName} ) ->
+		Arg_HashValues = [ {{crc32mod,1},0} ],
+		init_have_routing_table( RoutingTableName,RoutabHeirName ),
+		init_await_routab_completion( Arg_HashValues,RoutingTableName ),
+		%TODO% Can we assume peers already know all of importance?
 		%TODO% Start the agent services, when they are stopped
+		State = {},
 		loop( State ).
 
 
@@ -528,15 +565,17 @@ init( State ) ->
 % we can write, and that can be publicly read.  If it already exists,
 % continue using that (after taking it from its heir).
 %
-%TODO% pickup from heir if it sits there!
 %TODO% parameterise table name so we can do more elaborate testing
 %
--spec init_have_routing_table() -> ok.
+-spec init_have_routing_table(               ) -> ok.
+-spec init_have_routing_table( atom(),atom() ) -> ok.
 %
 init_have_routing_table() ->
-		case {ets:info( routing_table,heir ),whereis( routab_heir )} of
+		init_have_routing_table( routing_table,routab_heir ).
+init_have_routing_table( RoutingTableName,RoutingHeirName ) ->
+		case {ets:info( RoutingTableName,heir ),whereis( RoutingHeirName )} of
 		{none,Pid_heir} ->
-			ets:new( routing_table, [
+			ets:new( RoutingTableName, [
 				set,
 				protected,
 				named_table,
@@ -545,25 +584,117 @@ init_have_routing_table() ->
 				compressed ] ),
 			case Pid_heir of
 			undefined ->
-				%await routab_heir message
+				% expect routab_heir message in loop()
 				ok;
 			_ ->
-				ets:setopts( routing_table,{heir,Pid_heir,routing_table} )
+				%TODO% What opts exactly?  RoutabProcessName?
+				ets:setopts( RoutingTableName,{heir,Pid_heir,RoutingTableName} )
 			end,
-			%TODO% Set the heir for the table... using what Pid?!?
 			% Send resync_peer, and wait for responses
 			Peers = erlang:nodes(),
 			notify_peers( {resync_peer,self()}, Peers ),
 			[ init_allentries_peer( Peer ) || Peer <- Peers ],
 			ok;
 		{Pid_heir,Pid_heir} ->
-			Pid_heir ! {hand_over,routing_table},
+			Pid_heir ! {hand_over,RoutingTableName},
 			% Send resync_peer, but don't wait for replies
-			notify_peers( {resync_peer,self()} );
-		{Other,Pid_heir} ->
-			ets:setopts( routing_table,{heir,Pid_heir,routing_table} ),
-			ok
+			notify_peers( {resync_peer,self()} )  %CRASH% ;
+		%CRASH% {_Other,Pid_heir} ->
+		%CRASH% 	%TODO% What would this mean; who owns the table?  Crash?
+		%CRASH% 	ets:setopts( RoutingTableName,{heir,Pid_heir,RoutingTableName} ),
+		%CRASH% 	ok
 		end.
+
+
+
+% Await routing table completion (but timeout after 5min of inactivity).
+%
+% This may happen on multiple nodes in parallel.  To avoid deadlocking,
+% it is necessary that the local fragments are allowed to start (which is
+% the responsibility of the supervision infrastructure) and local fragment
+% announcements should be processed in this early stage, and passed over
+% to peer routabs (which is the responsibility of this routine).
+%
+-spec init_await_routab_completion( [hashvalue()]        ) -> ok | timeout.
+-spec init_await_routab_completion( [hashvalue()],atom() ) -> ok | timeout.
+%
+init_await_routab_completion( HashValues ) ->
+		init_await_routab_completion( HashValues,routing_table ).
+init_await_routab_completion( HashValues,RoutingTableName ) ->
+		ListAlgs = fun( ListAlgs,HashValues,Accu ) ->
+			% Strip out the algorithms; suppress duplicate entries
+			case HashValues of
+			[] ->
+				Accu;
+			[{HashAlgo,Output}|More] ->
+				case lists:member( HashAlgo,Accu ) of
+				true ->
+					ListAlgs( ListAlgs,More,Accu );
+				false ->
+					ListAlgs( ListAlgs,More,[HashAlgo|Accu] )
+				end
+			end
+		end,
+		AlgsToBeCompleted = ListAlgs( ListAlgs,HashValues,[] ),
+		ValsToBeHad = lists:flatten(
+			lists:map(
+				fun( HashAlgo ) ->
+					case hash:instances( HashAlgo ) of
+					undefined ->
+						[];
+					Instances ->
+						Instances
+					end
+				end,
+				AlgsToBeCompleted ) ),
+		DbKey = fun( {Key,_} ) -> Key end,
+		AlreadyFound = ets:foldl( DbKey,[],RoutingTableName ),
+		%
+		% A stripped-down version of the main loop that will
+		% take in local fragments from concurrently started
+		% processes as well as announcements from peer routab
+		% processes about their full tables.  In addition, we
+		% support parallel startup processes in neighbouring
+		% nodes.
+		%
+		% Potential problems with this selective-reception approach:
+		%  - we might receive peer table changes out of order
+		%  - we might miss removals and still conclude completion
+		%
+		% The first problem is avoided because the first thing our
+		% peers hear from us is our initial resync request.
+		%
+		% The second problem is not realistic; it also occurs during
+		% the main loop if we're out of luck; we accept it as a risk
+		% that we may try to contact a peer that is down.
+		%
+		InitLoop = fun( InitLoop,ValsToBeHad,AlreadyFound ) ->
+			ValsLeftToBeHad = [ HashVal ||
+				HashVal<-ValsToBeHad,
+				not lists:member( HashVal,AlreadyFound ) ],
+			case ValsLeftToBeHad of
+			[] ->
+				ok;
+			_ ->
+				receive
+				{add_local_fragment,HashValue,Pid} ->
+					add_local_fragment( HashValue,Pid ),
+					NewFound = [HashValue],
+					InitLoop( InitLoop,ValsLeftToBeHad,NewFound );
+				{allentries_peer,Pid,Entries} ->
+					allentries_peer( Pid,Entries ),
+					{NewFound,_} = lists:unzip( Entries ),
+					InitLoop( InitLoop,ValsLeftToBeHad,NewFound );
+				{resync_peer,Pid} ->
+					resync_peer( Pid ),
+					InitLoop( InitLoop,ValsLeftToBeHad,[] )
+				after 300000 ->
+					timeout
+				end
+			end
+		end,
+		InitLoop( InitLoop,ValsToBeHad,AlreadyFound ).
+
 
 
 % allentries_peer waits for the {allentries_peer,...} to resync the
@@ -600,7 +731,5 @@ init_allentries_peer( Pid_peer,Ref_peer ) ->
 			erlang:demonitor( Ref_peer ),
 			allentries_peer( Pid_peer,Content )
 		end.
-
-
 
 
