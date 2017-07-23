@@ -33,11 +33,17 @@
 ]).
 
 
-init( HashValue ) ->
+init( Opts ) ->
+		HashValue = maps:get( hash_value,Opts,routab ),
 		Pid_routab = register_routab( HashValue,1 ),
 		DbMap = #{},
+		State = #{
+			routab     => Pid_routab,
+			hash_value => HashValue,
+			dbmap      => DbMap
+		},
 		%TODO% Or return state to the gen_server
-		loop( {HashValue,DbMap,Pid_routab} ).
+		loop( State ).
 
 
 % Loop around, attempting to register with the global "routab"
@@ -64,14 +70,14 @@ register_routab( HashValue,Timeout ) ->
 		end.
 
 
-loop( {HashValue,DbMap,Pid_routab} ) ->
+loop( State=#{hash_value:=HashValue,dbmap:=DbMap,routab:=Pid_routab} ) ->
 		receive
 		%
 		% The routab process goes down; register once more
 		%
 		{'DOWN',_Ref,process,Pid_routab,_Reason} ->
 			NewPid_routab = register_routab( HashValue,1 ),
-			NewDbMap = DbMap;
+			NewState = State#{ routab:=NewPid_routab };
 		%
 		% We are sent a table, presumably because our parent dies
 		%
@@ -79,7 +85,7 @@ loop( {HashValue,DbMap,Pid_routab} ) ->
 			% We will crash on repeated submissions of a table
 			% to avoid curious synchronisation and ordering errors
 			NewDbMap = DbMap#{DbMapKey=>Table},
-			NewPid_routab = Pid_routab;
+			NewState = State#{ dbmap:=NewDbMap };
 		%
 		% Some process, presumably our parent, requests table hand_over
 		%
@@ -92,7 +98,7 @@ loop( {HashValue,DbMap,Pid_routab} ) ->
 			{Pid_frag,_,Pid_self} = ets:lookup( routing_table,HashValue ),
 			{Table,NewDbMap} = maps:take( DbMapKey,DbMap ),
 			ets:give_away( Table,Pid_frag,DbMapKey ),
-			NewPid_routab = Pid_routab
+			NewState = State#{ dbmap:=NewDbMap }
 		end,
-		loop( {HashValue,NewDbMap,NewPid_routab} ).
+		loop( NewState ).
 
